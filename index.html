@@ -98,7 +98,7 @@
       <p>Arrows: Move | Z: A | X: B | A: Y | S: X | Enter: Start | Shift: Select</p>
     </div>
     <div class="snes-note">
-      <p>SNES support requires snes9x.js and snes9x.wasm in the same folder. NES works now. Get files from GitHub (search Snes9x-Next).</p>
+      <p>SNES requires snes9x.js and snes9x.wasm in the same folder. NES works now. Get files from GitHub (search Snes9x-Next).</p>
     </div>
     <div class="error" id="errorMessage" style="display: none;">
       <p id="errorText"></p>
@@ -110,7 +110,8 @@
     // Detect Edge browser
     const isEdge = /Edg\//.test(navigator.userAgent);
     if (isEdge) {
-      console.warn('Microsoft Edge may block file inputs on file://. Try Firefox for best results.');
+      console.warn('Microsoft Edge may block file inputs on file://. Try Firefox or place ROMs in the same folder as index.html.');
+      showError('Edge may block file loading. Use Firefox or place ROMs in the same folder.');
     }
 
     // Initialize NES emulator
@@ -125,19 +126,23 @@
             showError('Canvas not supported. Use Firefox.');
             return;
           }
-          ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
           const imageData = ctx.createImageData(256, 240);
           const data = imageData.data;
           for (let i = 0; i < frameBuffer.length; i++) {
             const j = i * 4;
-            data[j] = frameBuffer[i] >> 16 & 0xff; // Red
-            data[j + 1] = frameBuffer[i] >> 8 & 0xff; // Green
-            data[j + 2] = frameBuffer[i] & 0xff; // Blue
-            data[j + 3] = 255; // Alpha
+            data[j] = frameBuffer[i] >> 16 & 0xff;
+            data[j + 1] = frameBuffer[i] >> 8 & 0xff;
+            data[j + 2] = frameBuffer[i] & 0xff;
+            data[j + 3] = 255;
           }
-          ctx.putImageData(imageData, 0, 16); // Center NES
+          ctx.putImageData(imageData, 0, 16);
         },
         onStatusUpdate: (text) => console.log('NES: ' + text),
+        onError: (error) => {
+          showError('Emulator error: ' + error + '. Try Firefox and a valid ROM.');
+          console.error('JSNES error:', error);
+        }
       });
     } catch (e) {
       showError('NES emulator failed: ' + e.message + '. Use Firefox.');
@@ -154,7 +159,7 @@
     function showError(message) {
       const errorDiv = document.getElementById('errorMessage');
       const errorText = document.getElementById('errorText');
-      errorText.textContent = 'Error: ' + message + (isEdge ? ' Edge may block files; try Firefox.' : '');
+      errorText.textContent = 'Error: ' + message;
       errorDiv.style.display = 'block';
       console.error(message);
     }
@@ -170,12 +175,13 @@
         console.log('Invalid NES header:', header);
         return false;
       }
-      const mapper = (data[6] >> 4) | (data[7] & 0xf0); // Mapper number
-      const supportedMappers = [0, 1, 2, 3, 4, 7]; // JSNES supported
+      const mapper = (data[6] >> 4) | (data[7] & 0xf0);
+      const supportedMappers = [0, 1, 2, 3, 4, 7];
       if (!supportedMappers.includes(mapper)) {
         console.log('Unsupported mapper:', mapper);
         return false;
       }
+      console.log('Valid NES ROM, mapper:', mapper);
       return true;
     }
 
@@ -199,7 +205,7 @@
         return;
       }
 
-      console.log('Attempting to load:', file.name, 'Size:', file.size);
+      console.log('Loading file:', file.name, 'Size:', file.size, 'Ext:', ext);
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -211,7 +217,6 @@
           }
           const uint8Array = new Uint8Array(arrayBuffer);
 
-          // Reset emulator
           if (currentEmulator) {
             if (currentEmulator === nes) {
               nes.stop();
@@ -228,7 +233,7 @@
               showError('Invalid NES ROM or unsupported mapper. Try Micro Mages from Itch.io.');
               return;
             }
-            console.log('Loading NES ROM:', file.name);
+            console.log('Starting NES ROM:', file.name);
             nes.loadROM(uint8Array);
             nes.start();
             currentEmulator = nes;
@@ -238,12 +243,12 @@
             initSnes();
           }
         } catch (error) {
-          showError('Failed to load ROM: ' + error.message + '. Try Firefox and Micro Mages (Itch.io).');
+          showError('Failed to load ROM: ' + error.message + '. Use Firefox and Micro Mages (Itch.io).');
           console.error('Load error:', error);
         }
       };
       reader.onerror = () => {
-        showError('Failed to read file. Use Firefox or place ROM in same folder.');
+        showError('Failed to read file. Use Firefox or place ROM in same folder as index.html.');
         console.error('FileReader error');
       };
       reader.readAsArrayBuffer(file);
