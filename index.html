@@ -94,7 +94,7 @@
       <canvas id="nesCanvas" width="256" height="240"></canvas>
     </div>
     <div class="disclaimer">
-      <p><strong>Legal Notice:</strong> Upload only legally acquired NES ROMs that you own. This site does not host or distribute ROMs.</p>
+      <p><strong>Legal Notice:</strong> Upload only legally acquired NES ROMs that you own.</p>
     </div>
     <div class="controls">
       <p><strong>Controls:</strong></p>
@@ -104,7 +104,7 @@
       <p>SNES support coming soon! Upload NES ROMs for now.</p>
     </div>
     <div class="error" id="errorMessage" style="display: none;">
-      <p>Error: Unable to load ROM. Try using Firefox or a legal .nes file.</p>
+      <p id="errorText"></p>
     </div>
   </div>
 
@@ -118,7 +118,7 @@
           const canvas = document.getElementById('nesCanvas');
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            showError('Canvas not supported in this browser.');
+            showError('Canvas not supported in this browser. Try Firefox.');
             return;
           }
           const imageData = ctx.createImageData(256, 240);
@@ -136,13 +136,14 @@
         onStatusUpdate: (text) => console.log(text),
       });
     } catch (e) {
-      showError('Failed to initialize emulator: ' + e.message);
+      showError('Failed to initialize emulator: ' + e.message + '. Try Firefox.');
     }
 
     // Show error message
     function showError(message) {
       const errorDiv = document.getElementById('errorMessage');
-      errorDiv.textContent = 'Error: ' + message;
+      const errorText = document.getElementById('errorText');
+      errorText.textContent = 'Error: ' + message;
       errorDiv.style.display = 'block';
     }
 
@@ -154,8 +155,13 @@
         return;
       }
 
-      if (!file.name.endsWith('.nes')) {
+      if (!file.name.toLowerCase().endsWith('.nes')) {
         showError('Please upload a valid .nes file.');
+        return;
+      }
+
+      if (file.size < 1024 || file.size > 1024 * 1024) { // Basic size check (1KB to 1MB)
+        showError('Invalid file size. NES ROMs are typically between 1KB and 1MB.');
         return;
       }
 
@@ -163,15 +169,26 @@
       reader.onload = (e) => {
         try {
           const arrayBuffer = e.target.result;
+          if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            showError('Empty or invalid ROM file.');
+            return;
+          }
           const uint8Array = new Uint8Array(arrayBuffer);
+          
+          // Reset emulator state
+          if (nes.frameTimer) {
+            nes.stop();
+            nes.cpu.reset();
+          }
+          
           nes.loadROM(uint8Array);
           nes.start();
           document.getElementById('errorMessage').style.display = 'none';
         } catch (error) {
-          showError('Error loading ROM: ' + error.message);
+          showError('Error loading ROM: ' + error.message + '. Ensure it\'s a valid .nes file and try Firefox.');
         }
       };
-      reader.onerror = () => showError('Failed to read file.');
+      reader.onerror = () => showError('Failed to read file. Try Firefox or a different ROM.');
       reader.readAsArrayBuffer(file);
     });
 
