@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retro Game Emulator Hub</title>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      color: #ffffff;
+      font-family: 'Press Start 2P', cursive;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 24px;
+      text-shadow: 2px 2px #ff0000, -2px -2px #00ff00;
+      margin-bottom: 20px;
+    }
+    .container {
+      background-color: #333;
+      padding: 20px;
+      border: 4px solid #666;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+      max-width: 800px;
+      width: 100%;
+    }
+    canvas {
+      border: 2px solid #fff;
+      image-rendering: pixelated;
+      width: 512px; /* 2x NES resolution (256x240) */
+      height: 480px;
+      background-color: #000;
+    }
+    input[type="file"] {
+      margin: 20px 0;
+      background-color: #555;
+      color: #fff;
+      padding: 10px;
+      border: 2px solid #fff;
+      border-radius: 4px;
+      font-family: 'Press Start 2P', cursive;
+    }
+    .disclaimer, .controls {
+      font-size: 12px;
+      margin-top: 20px;
+      color: #ccc;
+    }
+    .controls p {
+      margin: 5px 0;
+    }
+    .snes-placeholder {
+      color: #ff5555;
+      font-size: 14px;
+      margin-top: 20px;
+    }
+    /* CRT effect (optional) */
+    .crt {
+      position: relative;
+    }
+    .crt::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.1) 2px,
+        transparent 2px,
+        transparent 4px
+      );
+      pointer-events: none;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <h1>Retro Game Emulator Hub</h1>
+    <input type="file" id="romInput" accept=".nes" />
+    <div class="crt">
+      <canvas id="nesCanvas" width="256" height="240"></canvas>
+    </div>
+    <div class="disclaimer">
+      <p><strong>Legal Notice:</strong> Please upload only legally acquired NES ROMs that you own. This site does not host or distribute ROMs.</p>
+    </div>
+    <div class="controls">
+      <p><strong>Controls:</strong></p>
+      <p>Arrows: Move | Z: A | X: B | Enter: Start | Shift: Select</p>
+    </div>
+    <div class="snes-placeholder">
+      <p>SNES support coming soon! Upload NES ROMs for now.</p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/jsnes@1.0.0/dist/jsnes.min.js"></script>
+  <script>
+    // Initialize JSNES
+    const nes = new window.JSNES({
+      onFrame: (frameBuffer) => {
+        const canvas = document.getElementById('nesCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(256, 240); // NES resolution
+        const data = imageData.data;
+
+        // Convert frame buffer to canvas pixels
+        for (let i = 0; i < frameBuffer.length; i++) {
+          const j = i * 4;
+          data[j] = frameBuffer[i] >> 16 & 0xff; // Red
+          data[j + 1] = frameBuffer[i] >> 8 & 0xff; // Green
+          data[j + 2] = frameBuffer[i] & 0xff; // Blue
+          data[j + 3] = 255; // Alpha
+        }
+        ctx.putImageData(imageData, 0, 0);
+      },
+      onStatusUpdate: (text) => console.log(text), // Debug logs
+    });
+
+    // Handle ROM upload
+    document.getElementById('romInput').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          nes.loadROM(uint8Array);
+          nes.start();
+        } catch (error) {
+          alert('Error loading ROM: ' + error.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // Keyboard controls
+    const keyMap = {
+      38: 0x10, // Up
+      40: 0x20, // Down
+      37: 0x40, // Left
+      39: 0x80, // Right
+      90: 0x01, // Z (A)
+      88: 0x02, // X (B)
+      13: 0x08, // Enter (Start)
+      16: 0x04, // Shift (Select)
+    };
+
+    document.addEventListener('keydown', (event) => {
+      const button = keyMap[event.keyCode];
+      if (button) {
+        nes.buttonDown(1, button);
+        event.preventDefault();
+      }
+    });
+
+    document.addEventListener('keyup', (event) => {
+      const button = keyMap[event.keyCode];
+      if (button) {
+        nes.buttonUp(1, button);
+        event.preventDefault();
+      }
+    });
+  </script>
+</body>
+</html>
