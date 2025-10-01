@@ -34,8 +34,8 @@
     canvas {
       border: 2px solid #fff;
       image-rendering: pixelated;
-      width: 512px; /* 2x NES resolution (256x240) */
-      height: 480px;
+      width: 512px; /* 2x NES/SNES resolution */
+      height: 448px; /* SNES: 256x224, scaled */
       background-color: #000;
     }
     input[type="file"] {
@@ -58,12 +58,11 @@
     .controls p {
       margin: 5px 0;
     }
-    .snes-placeholder {
+    .snes-note {
       color: #ff5555;
-      font-size: 14px;
+      font-size: 12px;
       margin-top: 20px;
     }
-    /* CRT effect */
     .crt {
       position: relative;
     }
@@ -89,19 +88,19 @@
 <body>
   <div class="container">
     <h1>Retro Game Emulator Hub</h1>
-    <input type="file" id="romInput" accept=".nes" />
+    <input type="file" id="romInput" accept=".nes,.sfc,.smc" />
     <div class="crt">
-      <canvas id="nesCanvas" width="256" height="240"></canvas>
+      <canvas id="gameCanvas" width="256" height="224"></canvas>
     </div>
     <div class="disclaimer">
-      <p><strong>Legal Notice:</strong> Upload only legally acquired NES ROMs that you own.</p>
+      <p><strong>Legal Notice:</strong> Upload only legally acquired NES or SNES ROMs that you own.</p>
     </div>
     <div class="controls">
       <p><strong>Controls:</strong></p>
-      <p>Arrows: Move | Z: A | X: B | Enter: Start | Shift: Select</p>
+      <p>Arrows: Move | Z: A | X: B | A: Y | S: X | Enter: Start | Shift: Select</p>
     </div>
-    <div class="snes-placeholder">
-      <p>SNES support coming soon! Upload NES ROMs for now.</p>
+    <div class="snes-note">
+      <p>SNES support requires external files (snes9x.js, snes9x.wasm). NES works now; contact for SNES setup.</p>
     </div>
     <div class="error" id="errorMessage" style="display: none;">
       <p id="errorText"></p>
@@ -110,20 +109,20 @@
 
   <script src="https://unpkg.com/jsnes@1.0.0/dist/jsnes.min.js"></script>
   <script>
-    // Initialize JSNES
-    let nes;
+    // Initialize NES emulator
+    let nes, currentEmulator = null;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
     try {
       nes = new window.JSNES({
         onFrame: (frameBuffer) => {
-          const canvas = document.getElementById('nesCanvas');
-          const ctx = canvas.getContext('2d');
           if (!ctx) {
-            showError('Canvas not supported in this browser. Try Firefox.');
+            showError('Canvas not supported. Use Firefox.');
             return;
           }
           const imageData = ctx.createImageData(256, 240);
           const data = imageData.data;
-
           for (let i = 0; i < frameBuffer.length; i++) {
             const j = i * 4;
             data[j] = frameBuffer[i] >> 16 & 0xff; // Red
@@ -131,12 +130,20 @@
             data[j + 2] = frameBuffer[i] & 0xff; // Blue
             data[j + 3] = 255; // Alpha
           }
-          ctx.putImageData(imageData, 0, 0);
+          ctx.putImageData(imageData, 0, 16); // Center NES (240px) in 224px canvas
         },
-        onStatusUpdate: (text) => console.log(text),
+        onStatusUpdate: (text) => console.log('NES: ' + text),
       });
     } catch (e) {
-      showError('Failed to initialize emulator: ' + e.message + '. Try Firefox.');
+      showError('NES emulator failed: ' + e.message + '. Use Firefox.');
+    }
+
+    // SNES emulator placeholder (requires external files)
+    let snes = null;
+    function initSnes() {
+      showError('SNES support requires snes9x.js and snes9x.wasm. NES works for now.');
+      // Placeholder: Add snes9x.js and snes9x.wasm locally for full SNES support
+      // Example: snes = new SNES9x({ canvas: canvas, ... });
     }
 
     // Show error message
@@ -147,6 +154,13 @@
       errorDiv.style.display = 'block';
     }
 
+    // Validate NES ROM header
+    function isValidNesRom(data) {
+      if (data.length < 16) return false;
+      const header = String.fromCharCode.apply(null, data.slice(0, 4));
+      return header === 'NES\x1a';
+    }
+
     // Handle ROM upload
     document.getElementById('romInput').addEventListener('change', (event) => {
       const file = event.target.files[0];
@@ -155,13 +169,14 @@
         return;
       }
 
-      if (!file.name.toLowerCase().endsWith('.nes')) {
-        showError('Please upload a valid .nes file.');
+      const ext = file.name.toLowerCase().split('.').pop();
+      if (!['nes', 'sfc', 'smc'].includes(ext)) {
+        showError('Upload a .nes, .sfc, or .smc file.');
         return;
       }
 
-      if (file.size < 1024 || file.size > 1024 * 1024) { // Basic size check (1KB to 1MB)
-        showError('Invalid file size. NES ROMs are typically between 1KB and 1MB.');
+      if (file.size < 1024 || file.size > 4 * 1024 * 1024) {
+        showError('Invalid size. ROMs should be 1KB to 4MB.');
         return;
       }
 
@@ -174,48 +189,63 @@
             return;
           }
           const uint8Array = new Uint8Array(arrayBuffer);
-          
-          // Reset emulator state
-          if (nes.frameTimer) {
-            nes.stop();
-            nes.cpu.reset();
+
+          // Reset current emulator
+          if (currentEmulator) {
+            if (currentEmulator === nes) {
+              nes.stop();
+              nes.cpu.reset();
+            }
+            currentEmulator = null;
           }
-          
-          nes.loadROM(uint8Array);
-          nes.start();
-          document.getElementById('errorMessage').style.display = 'none';
+
+          if (ext === 'nes') {
+            if (!isValidNesRom(uint8Array)) {
+              showError('Invalid NES ROM format. Try a different .nes file.');
+              return;
+            }
+            nes.loadROM(uint8Array);
+            nes.start();
+            currentEmulator = nes;
+            document.getElementById('errorMessage').style.display = 'none';
+          } else {
+            showError('SNES support requires snes9x.js and snes9x.wasm. Use NES for now.');
+            initSnes();
+          }
         } catch (error) {
-          showError('Error loading ROM: ' + error.message + '. Ensure it\'s a valid .nes file and try Firefox.');
+          showError('Failed to load ROM: ' + error.message + '. Use Firefox and a valid .nes file.');
         }
       };
-      reader.onerror = () => showError('Failed to read file. Try Firefox or a different ROM.');
+      reader.onerror = () => showError('Failed to read file. Use Firefox.');
       reader.readAsArrayBuffer(file);
     });
 
     // Keyboard controls
     const keyMap = {
-      38: 0x10, // Up
-      40: 0x20, // Down
-      37: 0x40, // Left
-      39: 0x80, // Right
-      90: 0x01, // Z (A)
-      88: 0x02, // X (B)
-      13: 0x08, // Enter (Start)
-      16: 0x04, // Shift (Select)
+      38: { nes: 0x10 }, // Up
+      40: { nes: 0x20 }, // Down
+      37: { nes: 0x40 }, // Left
+      39: { nes: 0x80 }, // Right
+      90: { nes: 0x01 }, // Z: A
+      88: { nes: 0x02 }, // X: B
+      65: { nes: null }, // A: Y (SNES placeholder)
+      83: { nes: null }, // S: X (SNES placeholder)
+      13: { nes: 0x08 }, // Enter: Start
+      16: { nes: 0x04 }  // Shift: Select
     };
 
     document.addEventListener('keydown', (event) => {
       const button = keyMap[event.keyCode];
-      if (button && nes) {
-        nes.buttonDown(1, button);
+      if (button && currentEmulator === nes && button.nes) {
+        nes.buttonDown(1, button.nes);
         event.preventDefault();
       }
     });
 
     document.addEventListener('keyup', (event) => {
       const button = keyMap[event.keyCode];
-      if (button && nes) {
-        nes.buttonUp(1, button);
+      if (button && currentEmulator === nes && button.nes) {
+        nes.buttonUp(1, button.nes);
         event.preventDefault();
       }
     });
