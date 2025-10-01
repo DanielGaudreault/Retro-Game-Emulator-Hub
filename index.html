@@ -1,1001 +1,344 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Game Emulator Hub</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #fff;
-            font-family: 'Courier New', monospace;
-            line-height: 1.6;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .container {
-            max-width: 900px;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            border: 2px solid #444;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #444;
-        }
-
-        h1 {
-            font-size: 2.8rem;
-            margin-bottom: 10px;
-            color: #ffcc00;
-            text-shadow: 3px 3px 0 #ff0066;
-            letter-spacing: 2px;
-        }
-
-        .subtitle {
-            font-size: 1.2rem;
-            color: #aaa;
-            margin-bottom: 10px;
-        }
-
-        .game-selector {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        @media (max-width: 768px) {
-            .game-selector {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        .game-btn {
-            background: #333;
-            border: 2px solid #555;
-            color: white;
-            padding: 15px 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: 'Courier New', monospace;
-            font-size: 1rem;
-            font-weight: bold;
-        }
-
-        .game-btn:hover {
-            background: #444;
-            transform: translateY(-3px);
-            border-color: #ffcc00;
-        }
-
-        .game-btn.active {
-            background: #2a7a2a;
-            border-color: #4caf50;
-            transform: translateY(-3px);
-        }
-
-        .game-area {
-            position: relative;
-            width: 100%;
-            margin: 20px 0;
-            border: 4px solid #444;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #000;
-        }
-
-        #gameCanvas {
-            display: block;
-            width: 100%;
-            background: #000;
-            image-rendering: pixelated;
-        }
-
-        .crt-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0.1) 50%, rgba(0, 0, 0, 0.25) 50%);
-            background-size: 100% 4px;
-            pointer-events: none;
-            opacity: 0.3;
-            z-index: 10;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-
-        @media (max-width: 600px) {
-            .controls {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .control-group {
-            background: #2a2a2a;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #444;
-        }
-
-        .control-title {
-            font-size: 1.2rem;
-            color: #ffcc00;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .control-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            padding: 5px 0;
-            border-bottom: 1px dotted #444;
-        }
-
-        .key {
-            display: inline-block;
-            background: #444;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-family: monospace;
-            min-width: 30px;
-            text-align: center;
-        }
-
-        .status {
-            margin: 15px 0;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-
-        .status.success {
-            background: rgba(0, 255, 0, 0.2);
-            color: #4caf50;
-            border: 1px solid #4caf50;
-        }
-
-        .status.info {
-            background: rgba(0, 150, 255, 0.2);
-            color: #2196f3;
-            border: 1px solid #2196f3;
-        }
-
-        .game-info {
-            background: #2a2a2a;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 1px solid #444;
-        }
-
-        .game-info h3 {
-            color: #ffcc00;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        footer {
-            margin-top: 20px;
-            text-align: center;
-            color: #777;
-            font-size: 0.9rem;
-            padding-top: 15px;
-            border-top: 1px solid #333;
-        }
-
-        .score-display {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-size: 1.2rem;
-            z-index: 5;
-            text-shadow: 2px 2px 0 #000;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retro Game Emulator Hub</title>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      color: #ffffff;
+      font-family: 'Press Start 2P', cursive;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 24px;
+      text-shadow: 2px 2px #ff0000, -2px -2px #00ff00;
+      margin-bottom: 20px;
+    }
+    .container {
+      background-color: #333;
+      padding: 20px;
+      border: 4px solid #666;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+      max-width: 800px;
+      width: 100%;
+    }
+    canvas {
+      border: 2px solid #fff;
+      image-rendering: pixelated;
+      width: 512px;
+      height: 448px;
+      background-color: #000;
+    }
+    input[type="file"] {
+      margin: 20px 0;
+      background-color: #555;
+      color: #fff;
+      padding: 10px;
+      border: 2px solid #fff;
+      border-radius: 4px;
+      font-family: 'Press Start 2P', cursive;
+    }
+    .disclaimer, .controls, .error {
+      font-size: 12px;
+      margin-top: 20px;
+      color: #ccc;
+    }
+    .error {
+      color: #ff5555;
+    }
+    .controls p {
+      margin: 5px 0;
+    }
+    .crt {
+      position: relative;
+    }
+    .crt::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.1) 2px,
+        transparent 2px,
+        transparent 4px
+      );
+      pointer-events: none;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>RETRO GAME HUB</h1>
-            <p class="subtitle">Classic Games - No ROMs Required!</p>
-        </header>
-
-        <div class="game-selector">
-            <button class="game-btn active" data-game="pong">PONG</button>
-            <button class="game-btn" data-game="snake">SNAKE</button>
-            <button class="game-btn" data-game="breakout">BREAKOUT</button>
-            <button class="game-btn" data-game="invaders">SPACE INVADERS</button>
-        </div>
-
-        <div class="status info" id="statusMessage">
-            Select a game above to start playing!
-        </div>
-
-        <div class="game-area">
-            <div class="score-display" id="scoreDisplay">Score: 0</div>
-            <canvas id="gameCanvas" width="800" height="500"></canvas>
-            <div class="crt-overlay"></div>
-        </div>
-
-        <div class="game-info">
-            <h3 id="gameTitle">PONG</h3>
-            <p id="gameDescription">Move your paddle with the arrow keys to hit the ball back to your opponent.</p>
-        </div>
-
-        <div class="controls">
-            <div class="control-group">
-                <h3 class="control-title">GAME CONTROLS</h3>
-                <div class="control-item">
-                    <span>Move Paddle/Character</span>
-                    <span><span class="key">←</span> <span class="key">→</span></span>
-                </div>
-                <div class="control-item">
-                    <span>Move Snake</span>
-                    <span><span class="key">↑</span> <span class="key">↓</span> <span class="key">←</span> <span class="key">→</span></span>
-                </div>
-                <div class="control-item">
-                    <span>Shoot (Space Invaders)</span>
-                    <span><span class="key">Space</span></span>
-                </div>
-                <div class="control-item">
-                    <span>Pause Game</span>
-                    <span><span class="key">P</span></span>
-                </div>
-                <div class="control-item">
-                    <span>Restart Game</span>
-                    <span><span class="key">R</span></span>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <h3 class="control-title">GAME STATUS</h3>
-                <div class="control-item">
-                    <span>Current Game</span>
-                    <span id="currentGame">Pong</span>
-                </div>
-                <div class="control-item">
-                    <span>Score</span>
-                    <span id="currentScore">0</span>
-                </div>
-                <div class="control-item">
-                    <span>Lives</span>
-                    <span id="currentLives">3</span>
-                </div>
-                <div class="control-item">
-                    <span>Level</span>
-                    <span id="currentLevel">1</span>
-                </div>
-            </div>
-        </div>
-
-        <footer>
-            <p>Retro Game Hub | All games work directly in your browser - No downloads required!</p>
-        </footer>
+  <div class="container">
+    <h1>Retro Game Emulator Hub</h1>
+    <input type="file" id="romInput" accept=".nes,.sfc,.smc" />
+    <div class="crt">
+      <canvas id="gameCanvas" width="256" height="224"></canvas>
     </div>
+    <div class="disclaimer">
+      <p><strong>Legal Notice:</strong> Upload only legally acquired NES or SNES ROMs that you own.</p>
+    </div>
+    <div class="controls">
+      <p><strong>Controls:</strong></p>
+      <p>Arrows: Move | Z: A | X: B | A: Y | S: X | Enter: Start | Shift: Select</p>
+    </div>
+    <div class="error" id="errorMessage" style="display: none;">
+      <p id="errorText"></p>
+    </div>
+  </div>
 
-    <script>
-        // DOM Elements
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const statusMessage = document.getElementById('statusMessage');
-        const scoreDisplay = document.getElementById('scoreDisplay');
-        const gameTitle = document.getElementById('gameTitle');
-        const gameDescription = document.getElementById('gameDescription');
-        const currentGameElement = document.getElementById('currentGame');
-        const currentScoreElement = document.getElementById('currentScore');
-        const currentLivesElement = document.getElementById('currentLives');
-        const currentLevelElement = document.getElementById('currentLevel');
-        
-        // Game state
-        let currentGame = 'pong';
-        let gameInterval = null;
-        let isPaused = false;
-        let score = 0;
-        let lives = 3;
-        let level = 1;
-        
-        // Game objects
-        let pongState, snakeState, breakoutState, invadersState;
-        
-        // Initialize when page loads
-        function init() {
-            // Set up game buttons
-            document.querySelectorAll('.game-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    currentGame = this.getAttribute('data-game');
-                    startGame(currentGame);
-                });
-            });
-            
-            // Set up keyboard controls
-            document.addEventListener('keydown', handleKeyDown);
-            
-            // Start the first game
-            startGame('pong');
-            
-            updateStatus('Game loaded! Use the controls to play.', 'info');
+  <script src="https://unpkg.com/jsnes@1.0.0/dist/jsnes.min.js"></script>
+  <script src="snes9x.js"></script>
+  <script>
+    // Detect Edge browser
+    const isEdge = /Edg\//.test(navigator.userAgent);
+    if (isEdge) {
+      console.warn('Edge may block file inputs on file://. Place index.html, ROMs, snes9x.js, and snes9x.wasm in the same folder (e.g., C:\\Games).');
+      showError('Edge may block file loading. Place index.html, ROMs, snes9x.js, and snes9x.wasm in C:\\Games.');
+    }
+
+    // Initialize emulators
+    let nes, snes, currentEmulator = null;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // NES emulator
+    try {
+      nes = new window.JSNES({
+        onFrame: (frameBuffer) => {
+          if (!ctx) {
+            showError('Canvas not supported.');
+            return;
+          }
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const imageData = ctx.createImageData(256, 240);
+          const data = imageData.data;
+          for (let i = 0; i < frameBuffer.length; i++) {
+            const j = i * 4;
+            data[j] = frameBuffer[i] >> 16 & 0xff;
+            data[j + 1] = frameBuffer[i] >> 8 & 0xff;
+            data[j + 2] = frameBuffer[i] & 0xff;
+            data[j + 3] = 255;
+          }
+          ctx.putImageData(imageData, 0, 16);
+        },
+        onStatusUpdate: (text) => console.log('NES Status: ' + text),
+        onError: (error) => {
+          showError('NES emulator error: ' + error + '. Test with Micro Mages from itch.io.');
+          console.error('JSNES error:', error);
         }
-        
-        // Start the selected game
-        function startGame(game) {
-            // Clear any existing game interval
-            if (gameInterval) {
-                clearInterval(gameInterval);
-            }
-            
-            // Reset game state
-            currentGame = game;
-            isPaused = false;
-            score = 0;
-            lives = 3;
-            level = 1;
-            
-            // Update UI
-            currentGameElement.textContent = game.charAt(0).toUpperCase() + game.slice(1);
-            updateGameInfo();
-            
-            // Initialize the selected game
-            switch(game) {
-                case 'pong':
-                    initPong();
-                    gameTitle.textContent = 'PONG';
-                    gameDescription.textContent = 'Move your paddle with LEFT and RIGHT arrows to hit the ball. First to 5 points wins!';
-                    updateStatus('Pong - Use ← → to move your paddle', 'info');
-                    break;
-                case 'snake':
-                    initSnake();
-                    gameTitle.textContent = 'SNAKE';
-                    gameDescription.textContent = 'Use arrow keys to move the snake. Eat the food to grow longer. Avoid walls and yourself!';
-                    updateStatus('Snake - Use arrow keys to move. Eat the red food!', 'info');
-                    break;
-                case 'breakout':
-                    initBreakout();
-                    gameTitle.textContent = 'BREAKOUT';
-                    gameDescription.textContent = 'Move the paddle with LEFT and RIGHT arrows to bounce the ball and break all the bricks!';
-                    updateStatus('Breakout - Use ← → to move the paddle', 'info');
-                    break;
-                case 'invaders':
-                    initInvaders();
-                    gameTitle.textContent = 'SPACE INVADERS';
-                    gameDescription.textContent = 'Move with LEFT and RIGHT arrows, press SPACE to shoot. Destroy all aliens before they reach you!';
-                    updateStatus('Space Invaders - Use ← → to move, SPACE to shoot', 'info');
-                    break;
-            }
-            
-            // Start the game loop
-            gameInterval = setInterval(gameLoop, 1000 / 60);
+      });
+    } catch (e) {
+      showError('NES emulator failed to initialize: ' + e.message + '.');
+      console.error('NES init error:', e);
+    }
+
+    // SNES emulator
+    try {
+      snes = new window.SNES9X({
+        canvas: canvas,
+        onFrame: () => {
+          // Snes9x-Next handles canvas rendering
+        },
+        onError: (error) => {
+          showError('SNES emulator error: ' + error + '. Ensure snes9x.js and snes9x.wasm are in C:\\Games.');
+          console.error('SNES9X error:', error);
         }
-        
-        // Main game loop
-        function gameLoop() {
-            if (isPaused) return;
-            
-            // Clear canvas
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Run the current game's update and draw functions
-            switch(currentGame) {
-                case 'pong':
-                    updatePong();
-                    drawPong();
-                    break;
-                case 'snake':
-                    updateSnake();
-                    drawSnake();
-                    break;
-                case 'breakout':
-                    updateBreakout();
-                    drawBreakout();
-                    break;
-                case 'invaders':
-                    updateInvaders();
-                    drawInvaders();
-                    break;
+      });
+    } catch (e) {
+      showError('SNES emulator failed to initialize: ' + e.message + '. Ensure snes9x.js and snes9x.wasm are in C:\\Games.');
+      console.error('SNES init error:', e);
+    }
+
+    // Show error message
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      const errorText = document.getElementById('errorText');
+      errorText.textContent = 'Error: ' + message;
+      errorDiv.style.display = 'block';
+      console.error(message);
+    }
+
+    // Validate NES ROM
+    function isValidNesRom(data) {
+      if (data.length < 16) {
+        console.log('NES ROM too small:', data.length);
+        return false;
+      }
+      const header = String.fromCharCode.apply(null, data.slice(0, 4));
+      if (header !== 'NES\x1a') {
+        console.log('Invalid NES header:', header);
+        return false;
+      }
+      const mapper = (data[6] >> 4) | (data[7] & 0xf0);
+      const supportedMappers = [0, 1, 2, 3, 4, 7];
+      if (!supportedMappers.includes(mapper)) {
+        console.log('Unsupported NES mapper:', mapper);
+        return false;
+      }
+      console.log('Valid NES ROM, mapper:', mapper);
+      return true;
+    }
+
+    // Validate SNES ROM (basic)
+    function isValidSnesRom(data) {
+      if (data.length < 512) {
+        console.log('SNES ROM too small:', data.length);
+        return false;
+      }
+      const hasSmcHeader = data.length % 1024 === 512;
+      console.log('SNES ROM, size:', data.length, 'SMC header:', hasSmcHeader);
+      return true;
+    }
+
+    // Handle ROM upload
+    document.getElementById('romInput').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        showError('No file selected.');
+        return;
+      }
+
+      const ext = file.name.toLowerCase().split('.').pop();
+      if (!['nes', 'sfc', 'smc'].includes(ext)) {
+        showError('Upload a .nes, .sfc, or .smc file.');
+        return;
+      }
+
+      if (file.size < 1024 || file.size > 4 * 1024 * 1024) {
+        showError('Invalid size. ROMs should be 1KB to 4MB.');
+        console.log('File size:', file.size);
+        return;
+      }
+
+      console.log('Loading file:', file.name, 'Size:', file.size, 'Ext:', ext);
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            showError('Empty or invalid ROM file.');
+            return;
+          }
+          const uint8Array = new Uint8Array(arrayBuffer);
+
+          if (currentEmulator) {
+            if (currentEmulator === nes) {
+              nes.stop();
+              nes.cpu.reset();
+              nes.ppu.reset();
+              nes.mmap.reset();
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+            } else if (currentEmulator === snes) {
+              snes.stop();
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
             }
-            
-            // Update score display
-            scoreDisplay.textContent = `Score: ${score}`;
-            updateGameInfo();
+            currentEmulator = null;
+          }
+
+          if (ext === 'nes') {
+            if (!isValidNesRom(uint8Array)) {
+              showError('Invalid NES ROM or unsupported mapper. Download Micro Mages from itch.io.');
+              return;
+            }
+            console.log('Starting NES ROM:', file.name);
+            nes.loadROM(uint8Array);
+            setTimeout(() => {
+              try {
+                nes.start();
+                currentEmulator = nes;
+                document.getElementById('errorMessage').style.display = 'none';
+                console.log('NES started successfully');
+              } catch (startError) {
+                showError('Failed to start NES ROM: ' + startError.message + '. Test Micro Mages.');
+                console.error('NES start error:', startError);
+              }
+            }, 1000); // Increased delay
+          } else if (['sfc', 'smc'].includes(ext)) {
+            if (!snes) {
+              showError('SNES emulator not initialized. Ensure snes9x.js and snes9x.wasm are in C:\\Games.');
+              return;
+            }
+            if (!isValidSnesRom(uint8Array)) {
+              showError('Invalid SNES ROM. Try a homebrew .sfc from SMWCentral.');
+              return;
+            }
+            console.log('Starting SNES ROM:', file.name);
+            snes.loadROM(uint8Array);
+            setTimeout(() => {
+              try {
+                snes.start();
+                currentEmulator = snes;
+                document.getElementById('errorMessage').style.display = 'none';
+                console.log('SNES started successfully');
+              } catch (startError) {
+                showError('Failed to start SNES ROM: ' + startError.message + '. Ensure snes9x.wasm is in C:\\Games.');
+                console.error('SNES start error:', startError);
+              }
+            }, 1000);
+          }
+        } catch (error) {
+          showError('Failed to load ROM: ' + error.message + '. Test Micro Mages or a .sfc from SMWCentral.');
+          console.error('Load error:', error);
         }
-        
-        // Handle keyboard input
-        function handleKeyDown(event) {
-            if (event.key === 'p' || event.key === 'P') {
-                isPaused = !isPaused;
-                updateStatus(isPaused ? 'Game Paused' : 'Game Resumed', 'info');
-                return;
-            }
-            
-            if (event.key === 'r' || event.key === 'R') {
-                startGame(currentGame);
-                return;
-            }
-            
-            // Game-specific key handling
-            switch(currentGame) {
-                case 'pong':
-                    handlePongInput(event);
-                    break;
-                case 'snake':
-                    handleSnakeInput(event);
-                    break;
-                case 'breakout':
-                    handleBreakoutInput(event);
-                    break;
-                case 'invaders':
-                    handleInvadersInput(event);
-                    break;
-            }
-        }
-        
-        // Update game info display
-        function updateGameInfo() {
-            currentScoreElement.textContent = score;
-            currentLivesElement.textContent = lives;
-            currentLevelElement.textContent = level;
-        }
-        
-        // Update status message
-        function updateStatus(message, type) {
-            statusMessage.textContent = message;
-            statusMessage.className = 'status ' + type;
-        }
-        
-        // PONG GAME IMPLEMENTATION
-        function initPong() {
-            pongState = {
-                ballX: canvas.width / 2,
-                ballY: canvas.height / 2,
-                ballSpeedX: 5,
-                ballSpeedY: 3,
-                ballSize: 10,
-                paddleWidth: 15,
-                paddleHeight: 80,
-                playerY: canvas.height / 2 - 40,
-                computerY: canvas.height / 2 - 40,
-                playerScore: 0,
-                computerScore: 0
-            };
-        }
-        
-        function updatePong() {
-            // Move ball
-            pongState.ballX += pongState.ballSpeedX;
-            pongState.ballY += pongState.ballSpeedY;
-            
-            // Ball collision with top and bottom
-            if (pongState.ballY <= 0 || pongState.ballY >= canvas.height) {
-                pongState.ballSpeedY = -pongState.ballSpeedY;
-            }
-            
-            // Ball collision with paddles
-            if (pongState.ballX <= pongState.paddleWidth && 
-                pongState.ballY >= pongState.playerY && 
-                pongState.ballY <= pongState.playerY + pongState.paddleHeight) {
-                pongState.ballSpeedX = -pongState.ballSpeedX;
-                // Add some randomness to the bounce
-                pongState.ballSpeedY = (pongState.ballY - (pongState.playerY + pongState.paddleHeight/2)) * 0.2;
-            }
-            
-            if (pongState.ballX >= canvas.width - pongState.paddleWidth && 
-                pongState.ballY >= pongState.computerY && 
-                pongState.ballY <= pongState.computerY + pongState.paddleHeight) {
-                pongState.ballSpeedX = -pongState.ballSpeedX;
-                // Add some randomness to the bounce
-                pongState.ballSpeedY = (pongState.ballY - (pongState.computerY + pongState.paddleHeight/2)) * 0.2;
-            }
-            
-            // Computer AI (simple follow the ball)
-            if (pongState.computerY + pongState.paddleHeight/2 < pongState.ballY - 10) {
-                pongState.computerY += 4;
-            } else if (pongState.computerY + pongState.paddleHeight/2 > pongState.ballY + 10) {
-                pongState.computerY -= 4;
-            }
-            
-            // Keep computer paddle on screen
-            if (pongState.computerY < 0) pongState.computerY = 0;
-            if (pongState.computerY > canvas.height - pongState.paddleHeight) {
-                pongState.computerY = canvas.height - pongState.paddleHeight;
-            }
-            
-            // Score points
-            if (pongState.ballX < 0) {
-                pongState.computerScore++;
-                resetPongBall();
-            }
-            
-            if (pongState.ballX > canvas.width) {
-                pongState.playerScore++;
-                resetPongBall();
-            }
-            
-            // Update score
-            score = pongState.playerScore;
-            
-            // Check for win condition
-            if (pongState.playerScore >= 5) {
-                updateStatus('You Win! Press R to play again', 'success');
-                isPaused = true;
-            } else if (pongState.computerScore >= 5) {
-                updateStatus('Computer Wins! Press R to play again', 'info');
-                isPaused = true;
-            }
-        }
-        
-        function resetPongBall() {
-            pongState.ballX = canvas.width / 2;
-            pongState.ballY = canvas.height / 2;
-            pongState.ballSpeedX = -pongState.ballSpeedX;
-            pongState.ballSpeedY = Math.random() * 6 - 3;
-        }
-        
-        function drawPong() {
-            // Draw center line
-            ctx.strokeStyle = '#fff';
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0);
-            ctx.lineTo(canvas.width / 2, canvas.height);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Draw paddles
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(0, pongState.playerY, pongState.paddleWidth, pongState.paddleHeight);
-            ctx.fillRect(canvas.width - pongState.paddleWidth, pongState.computerY, pongState.paddleWidth, pongState.paddleHeight);
-            
-            // Draw ball
-            ctx.beginPath();
-            ctx.arc(pongState.ballX, pongState.ballY, pongState.ballSize, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw scores
-            ctx.font = '30px Courier New';
-            ctx.fillText(pongState.playerScore, canvas.width / 4, 40);
-            ctx.fillText(pongState.computerScore, 3 * canvas.width / 4, 40);
-        }
-        
-        function handlePongInput(event) {
-            if (event.key === 'ArrowUp' && pongState.playerY > 0) {
-                pongState.playerY -= 20;
-            } else if (event.key === 'ArrowDown' && pongState.playerY < canvas.height - pongState.paddleHeight) {
-                pongState.playerY += 20;
-            }
-        }
-        
-        // SNAKE GAME IMPLEMENTATION
-        function initSnake() {
-            snakeState = {
-                snake: [{x: 10, y: 10}],
-                food: {x: 15, y: 15},
-                dx: 1,
-                dy: 0,
-                cellSize: 20,
-                gameOver: false
-            };
-        }
-        
-        function updateSnake() {
-            if (snakeState.gameOver) return;
-            
-            // Move snake
-            const head = {x: snakeState.snake[0].x + snakeState.dx, y: snakeState.snake[0].y + snakeState.dy};
-            snakeState.snake.unshift(head);
-            
-            // Check for food collision
-            if (head.x === snakeState.food.x && head.y === snakeState.food.y) {
-                // Generate new food
-                snakeState.food.x = Math.floor(Math.random() * (canvas.width / snakeState.cellSize));
-                snakeState.food.y = Math.floor(Math.random() * (canvas.height / snakeState.cellSize));
-                score += 10;
-                
-                // Increase level every 50 points
-                if (score % 50 === 0) {
-                    level++;
-                    updateStatus(`Level ${level}! Snake speed increased.`, 'success');
-                }
-            } else {
-                // Remove tail if no food eaten
-                snakeState.snake.pop();
-            }
-            
-            // Check for game over conditions
-            // Wall collision
-            if (head.x < 0 || head.x >= canvas.width / snakeState.cellSize || 
-                head.y < 0 || head.y >= canvas.height / snakeState.cellSize) {
-                snakeState.gameOver = true;
-                updateStatus('Game Over! Hit the wall. Press R to restart', 'info');
-                return;
-            }
-            
-            // Self collision
-            for (let i = 1; i < snakeState.snake.length; i++) {
-                if (head.x === snakeState.snake[i].x && head.y === snakeState.snake[i].y) {
-                    snakeState.gameOver = true;
-                    updateStatus('Game Over! You ate yourself. Press R to restart', 'info');
-                    return;
-                }
-            }
-        }
-        
-        function drawSnake() {
-            // Draw snake
-            ctx.fillStyle = '#0f0';
-            snakeState.snake.forEach(segment => {
-                ctx.fillRect(segment.x * snakeState.cellSize, segment.y * snakeState.cellSize, 
-                            snakeState.cellSize, snakeState.cellSize);
-            });
-            
-            // Draw food
-            ctx.fillStyle = '#f00';
-            ctx.fillRect(snakeState.food.x * snakeState.cellSize, snakeState.food.y * snakeState.cellSize, 
-                        snakeState.cellSize, snakeState.cellSize);
-            
-            // Draw grid (optional)
-            ctx.strokeStyle = '#222';
-            for (let x = 0; x < canvas.width; x += snakeState.cellSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-            for (let y = 0; y < canvas.height; y += snakeState.cellSize) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
-            }
-        }
-        
-        function handleSnakeInput(event) {
-            if (snakeState.gameOver) return;
-            
-            const key = event.key;
-            if (key === 'ArrowUp' && snakeState.dy === 0) {
-                snakeState.dx = 0;
-                snakeState.dy = -1;
-            } else if (key === 'ArrowDown' && snakeState.dy === 0) {
-                snakeState.dx = 0;
-                snakeState.dy = 1;
-            } else if (key === 'ArrowLeft' && snakeState.dx === 0) {
-                snakeState.dx = -1;
-                snakeState.dy = 0;
-            } else if (key === 'ArrowRight' && snakeState.dx === 0) {
-                snakeState.dx = 1;
-                snakeState.dy = 0;
-            }
-        }
-        
-        // BREAKOUT GAME IMPLEMENTATION
-        function initBreakout() {
-            breakoutState = {
-                paddleX: canvas.width / 2 - 50,
-                paddleWidth: 100,
-                paddleHeight: 15,
-                ballX: canvas.width / 2,
-                ballY: canvas.height - 30,
-                ballSpeedX: 4,
-                ballSpeedY: -4,
-                ballSize: 8,
-                bricks: [],
-                brickRowCount: 5,
-                brickColumnCount: 10,
-                brickWidth: 70,
-                brickHeight: 20,
-                brickPadding: 5,
-                brickOffsetTop: 50,
-                brickOffsetLeft: 15
-            };
-            
-            // Initialize bricks
-            for (let c = 0; c < breakoutState.brickColumnCount; c++) {
-                breakoutState.bricks[c] = [];
-                for (let r = 0; r < breakoutState.brickRowCount; r++) {
-                    breakoutState.bricks[c][r] = { x: 0, y: 0, status: 1 };
-                }
-            }
-        }
-        
-        function updateBreakout() {
-            // Move ball
-            breakoutState.ballX += breakoutState.ballSpeedX;
-            breakoutState.ballY += breakoutState.ballSpeedY;
-            
-            // Wall collisions (left/right)
-            if (breakoutState.ballX <= 0 || breakoutState.ballX >= canvas.width) {
-                breakoutState.ballSpeedX = -breakoutState.ballSpeedX;
-            }
-            
-            // Wall collision (top)
-            if (breakoutState.ballY <= 0) {
-                breakoutState.ballSpeedY = -breakoutState.ballSpeedY;
-            }
-            
-            // Paddle collision
-            if (breakoutState.ballY + breakoutState.ballSize >= canvas.height - breakoutState.paddleHeight &&
-                breakoutState.ballX >= breakoutState.paddleX &&
-                breakoutState.ballX <= breakoutState.paddleX + breakoutState.paddleWidth) {
-                breakoutState.ballSpeedY = -breakoutState.ballSpeedY;
-                
-                // Change ball direction based on where it hits the paddle
-                let hitPos = (breakoutState.ballX - breakoutState.paddleX) / breakoutState.paddleWidth;
-                breakoutState.ballSpeedX = 5 * (hitPos - 0.5);
-            }
-            
-            // Bottom wall collision (lose a life)
-            if (breakoutState.ballY >= canvas.height) {
-                lives--;
-                if (lives <= 0) {
-                    updateStatus('Game Over! Press R to restart', 'info');
-                    isPaused = true;
-                } else {
-                    resetBreakoutBall();
-                    updateStatus(`Ball lost! ${lives} lives remaining`, 'info');
-                }
-            }
-            
-            // Brick collisions
-            for (let c = 0; c < breakoutState.brickColumnCount; c++) {
-                for (let r = 0; r < breakoutState.brickRowCount; r++) {
-                    const brick = breakoutState.bricks[c][r];
-                    if (brick.status === 1) {
-                        const brickX = c * (breakoutState.brickWidth + breakoutState.brickPadding) + breakoutState.brickOffsetLeft;
-                        const brickY = r * (breakoutState.brickHeight + breakoutState.brickPadding) + breakoutState.brickOffsetTop;
-                        
-                        if (breakoutState.ballX > brickX && breakoutState.ballX < brickX + breakoutState.brickWidth &&
-                            breakoutState.ballY > brickY && breakoutState.ballY < brickY + breakoutState.brickHeight) {
-                            breakoutState.ballSpeedY = -breakoutState.ballSpeedY;
-                            brick.status = 0;
-                            score += 10;
-                            
-                            // Check for win
-                            let bricksLeft = 0;
-                            for (let c2 = 0; c2 < breakoutState.brickColumnCount; c2++) {
-                                for (let r2 = 0; r2 < breakoutState.brickRowCount; r2++) {
-                                    bricksLeft += breakoutState.bricks[c2][r2].status;
-                                }
-                            }
-                            
-                            if (bricksLeft === 0) {
-                                updateStatus('You Win! All bricks destroyed! Press R to play again', 'success');
-                                isPaused = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        function resetBreakoutBall() {
-            breakoutState.ballX = canvas.width / 2;
-            breakoutState.ballY = canvas.height - 30;
-            breakoutState.ballSpeedX = 4;
-            breakoutState.ballSpeedY = -4;
-        }
-        
-        function drawBreakout() {
-            // Draw paddle
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(breakoutState.paddleX, canvas.height - breakoutState.paddleHeight, 
-                        breakoutState.paddleWidth, breakoutState.paddleHeight);
-            
-            // Draw ball
-            ctx.beginPath();
-            ctx.arc(breakoutState.ballX, breakoutState.ballY, breakoutState.ballSize, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw bricks
-            for (let c = 0; c < breakoutState.brickColumnCount; c++) {
-                for (let r = 0; r < breakoutState.brickRowCount; r++) {
-                    if (breakoutState.bricks[c][r].status === 1) {
-                        const brickX = c * (breakoutState.brickWidth + breakoutState.brickPadding) + breakoutState.brickOffsetLeft;
-                        const brickY = r * (breakoutState.brickHeight + breakoutState.brickPadding) + breakoutState.brickOffsetTop;
-                        
-                        ctx.fillStyle = `hsl(${r * 60}, 100%, 50%)`;
-                        ctx.fillRect(brickX, brickY, breakoutState.brickWidth, breakoutState.brickHeight);
-                    }
-                }
-            }
-        }
-        
-        function handleBreakoutInput(event) {
-            if (event.key === 'ArrowLeft' && breakoutState.paddleX > 0) {
-                breakoutState.paddleX -= 20;
-            } else if (event.key === 'ArrowRight' && breakoutState.paddleX < canvas.width - breakoutState.paddleWidth) {
-                breakoutState.paddleX += 20;
-            }
-        }
-        
-        // SPACE INVADERS GAME IMPLEMENTATION
-        function initInvaders() {
-            invadersState = {
-                playerX: canvas.width / 2 - 25,
-                playerWidth: 50,
-                playerHeight: 20,
-                bullets: [],
-                enemies: [],
-                enemyRows: 3,
-                enemyCols: 8,
-                enemyWidth: 40,
-                enemyHeight: 30,
-                enemyPadding: 10,
-                enemyOffsetTop: 50,
-                enemyOffsetLeft: 30,
-                enemySpeed: 1,
-                enemyDirection: 1,
-                lastShot: 0,
-                shotDelay: 500 // ms
-            };
-            
-            // Initialize enemies
-            for (let r = 0; r < invadersState.enemyRows; r++) {
-                invadersState.enemies[r] = [];
-                for (let c = 0; c < invadersState.enemyCols; c++) {
-                    invadersState.enemies[r][c] = { x: 0, y: 0, alive: true };
-                }
-            }
-        }
-        
-        function updateInvaders() {
-            // Move player with arrow keys (handled in input function)
-            
-            // Move bullets
-            for (let i = invadersState.bullets.length - 1; i >= 0; i--) {
-                invadersState.bullets[i].y -= 7;
-                
-                // Remove bullets that go off screen
-                if (invadersState.bullets[i].y < 0) {
-                    invadersState.bullets.splice(i, 1);
-                    continue;
-                }
-                
-                // Check for bullet-enemy collisions
-                for (let r = 0; r < invadersState.enemyRows; r++) {
-                    for (let c = 0; c < invadersState.enemyCols; c++) {
-                        const enemy = invadersState.enemies[r][c];
-                        if (enemy.alive) {
-                            const enemyX = c * (invadersState.enemyWidth + invadersState.enemyPadding) + invadersState.enemyOffsetLeft;
-                            const enemyY = r * (invadersState.enemyHeight + invadersState.enemyPadding) + invadersState.enemyOffsetTop;
-                            
-                            if (invadersState.bullets[i].x > enemyX && 
-                                invadersState.bullets[i].x < enemyX + invadersState.enemyWidth &&
-                                invadersState.bullets[i].y > enemyY && 
-                                invadersState.bullets[i].y < enemyY + invadersState.enemyHeight) {
-                                
-                                enemy.alive = false;
-                                invadersState.bullets.splice(i, 1);
-                                score += 20;
-                                
-                                // Check for win
-                                let enemiesLeft = 0;
-                                for (let r2 = 0; r2 < invadersState.enemyRows; r2++) {
-                                    for (let c2 = 0; c2 < invadersState.enemyCols; c2++) {
-                                        if (invadersState.enemies[r2][c2].alive) enemiesLeft++;
-                                    }
-                                }
-                                
-                                if (enemiesLeft === 0) {
-                                    updateStatus('You Win! All aliens destroyed! Press R to play again', 'success');
-                                    isPaused = true;
-                                }
-                                
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Move enemies
-            let moveDown = false;
-            for (let r = 0; r < invadersState.enemyRows; r++) {
-                for (let c = 0; c < invadersState.enemyCols; c++) {
-                    const enemy = invadersState.enemies[r][c];
-                    if (enemy.alive) {
-                        const enemyX = c * (invadersState.enemyWidth + invadersState.enemyPadding) + invadersState.enemyOffsetLeft;
-                        
-                        // Check if any enemy hits the edge
-                        if ((enemyX + invadersState.enemyWidth >= canvas.width && invadersState.enemyDirection > 0) ||
-                            (enemyX <= 0 && invadersState.enemyDirection < 0)) {
-                            moveDown = true;
-                        }
-                    }
-                }
-            }
-            
-            if (moveDown) {
-                invadersState.enemyDirection = -invadersState.enemyDirection;
-                invadersState.enemyOffsetTop += 20;
-                
-                // Check if enemies reached the bottom
-                if (invadersState.enemyOffsetTop + invadersState.enemyRows * (invadersState.enemyHeight + invadersState.enemyPadding) >= 
-                    canvas.height - 50) {
-                    updateStatus('Game Over! Aliens reached the bottom. Press R to restart', 'info');
-                    isPaused = true;
-                }
-            } else {
-                invadersState.enemyOffsetLeft += invadersState.enemySpeed * invadersState.enemyDirection;
-            }
-        }
-        
-        function drawInvaders() {
-            // Draw player
-            ctx.fillStyle = '#0f0';
-            ctx.fillRect(invadersState.playerX, canvas.height - 30, invadersState.playerWidth, invadersState.playerHeight);
-            
-            // Draw bullets
-            ctx.fillStyle = '#ff0';
-            invadersState.bullets.forEach(bullet => {
-                ctx.fillRect(bullet.x - 2, bullet.y, 4, 10);
-            });
-            
-            // Draw enemies
-            for (let r = 0; r < invadersState.enemyRows; r++) {
-                for (let c = 0; c < invadersState.enemyCols; c++) {
-                    const enemy = invadersState.enemies[r][c];
-                    if (enemy.alive) {
-                        const enemyX = c * (invadersState.enemyWidth + invadersState.enemyPadding) + invadersState.enemyOffsetLeft;
-                        const enemyY = r * (invadersState.enemyHeight + invadersState.enemyPadding) + invadersState.enemyOffsetTop;
-                        
-                        ctx.fillStyle = `hsl(${r * 60}, 100%, 50%)`;
-                        ctx.fillRect(enemyX, enemyY, invadersState.enemyWidth, invadersState.enemyHeight);
-                    }
-                }
-            }
-        }
-        
-        function handleInvadersInput(event) {
-            if (event.key === 'ArrowLeft' && invadersState.playerX > 0) {
-                invadersState.playerX -= 10;
-            } else if (event.key === 'ArrowRight' && invadersState.playerX < canvas.width - invadersState.playerWidth) {
-                invadersState.playerX += 10;
-            } else if (event.key === ' ') {
-                // Space bar to shoot
-                const now = Date.now();
-                if (now - invadersState.lastShot > invadersState.shotDelay) {
-                    invadersState.bullets.push({
-                        x: invadersState.playerX + invadersState.playerWidth / 2,
-                        y: canvas.height - 30
-                    });
-                    invadersState.lastShot = now;
-                }
-            }
-        }
-        
-        // Initialize the application
-        window.addEventListener('load', init);
-    </script>
+      };
+      reader.onerror = () => {
+        showError('Failed to read file. Place index.html, ROMs, snes9x.js, and snes9x.wasm in C:\\Games.');
+        console.error('FileReader error');
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // Keyboard controls
+    const keyMap = {
+      38: { nes: 0x10, snes: 'UP' }, // Up
+      40: { nes: 0x20, snes: 'DOWN' }, // Down
+      37: { nes: 0x40, snes: 'LEFT' }, // Left
+      39: { nes: 0x80, snes: 'RIGHT' }, // Right
+      90: { nes: 0x01, snes: 'A' }, // Z: A
+      88: { nes: 0x02, snes: 'B' }, // X: B
+      65: { nes: null, snes: 'Y' }, // A: Y
+      83: { nes: null, snes: 'X' }, // S: X
+      13: { nes: 0x08, snes: 'START' }, // Enter: Start
+      16: { nes: 0x04, snes: 'SELECT' } // Shift: Select
+    };
+
+    document.addEventListener('keydown', (event) => {
+      const button = keyMap[event.keyCode];
+      if (!button || !currentEmulator) return;
+      if (currentEmulator === nes && button.nes) {
+        nes.buttonDown(1, button.nes);
+        event.preventDefault();
+      } else if (currentEmulator === snes && button.snes) {
+        snes.buttonDown(button.snes);
+        event.preventDefault();
+      }
+    });
+
+    document.addEventListener('keyup', (event) => {
+      const button = keyMap[event.keyCode];
+      if (!button || !currentEmulator) return;
+      if (currentEmulator === nes && button.nes) {
+        nes.buttonUp(1, button.nes);
+        event.preventDefault();
+      } else if (currentEmulator === snes && button.snes) {
+        snes.buttonUp(button.snes);
+        event.preventDefault();
+      }
+    });
+  </script>
 </body>
 </html>
