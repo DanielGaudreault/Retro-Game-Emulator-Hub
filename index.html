@@ -5,16 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Retro Game Emulator Hub</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
     body {
       background-color: #1a1a1a;
       color: #ffffff;
-      font-family: 'Courier New', monospace;
+      font-family: 'Press Start 2P', cursive;
       text-align: center;
       margin: 0;
       padding: 20px;
@@ -22,107 +16,54 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      overflow-x: hidden;
     }
-    
     h1 {
-      font-size: 28px;
+      font-size: 24px;
       text-shadow: 2px 2px #ff0000, -2px -2px #00ff00;
       margin-bottom: 20px;
-      padding: 10px;
-      color: #fff;
     }
-    
     .container {
-      background-color: #222;
+      background-color: #333;
       padding: 20px;
-      border: 4px solid #444;
+      border: 4px solid #666;
       border-radius: 8px;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
       max-width: 800px;
       width: 100%;
-      margin-bottom: 20px;
     }
-    
-    .game-selector {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      margin: 20px 0;
+    canvas {
+      border: 2px solid #fff;
+      image-rendering: pixelated;
+      width: 512px;
+      height: 448px;
+      background-color: #000;
     }
-    
-    .game-btn {
-      background-color: #4a4a4a;
-      color: white;
-      border: 2px solid #666;
-      padding: 12px 20px;
-      border-radius: 6px;
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.3s;
-      min-width: 150px;
-    }
-    
-    .game-btn:hover {
-      background-color: #5a5a5a;
-      transform: translateY(-2px);
-    }
-    
-    .game-btn.active {
-      background-color: #2a7a2a;
-      border-color: #4caf50;
-    }
-    
-    .file-input-container {
-      margin: 20px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-    
     input[type="file"] {
+      margin: 20px 0;
       background-color: #555;
       color: #fff;
       padding: 10px;
-      border: 2px solid #666;
+      border: 2px solid #fff;
       border-radius: 4px;
-      font-family: 'Courier New', monospace;
-      cursor: pointer;
-      width: 100%;
-      max-width: 400px;
+      font-family: 'Press Start 2P', cursive;
     }
-    
-    .game-area {
+    .disclaimer, .controls, .error, .snes-note {
+      font-size: 12px;
+      margin-top: 20px;
+      color: #ccc;
+    }
+    .error {
+      color: #ff5555;
+    }
+    .snes-note {
+      color: #ff5555;
+    }
+    .controls p {
+      margin: 5px 0;
+    }
+    .crt {
       position: relative;
-      margin: 20px 0;
     }
-    
-    canvas {
-      border: 4px solid #666;
-      image-rendering: pixelated;
-      width: 640px;
-      height: 480px;
-      background-color: #000;
-      display: block;
-      margin: 0 auto;
-    }
-    
-    .crt::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(rgba(18, 16, 16, 0.1) 50%, rgba(0, 0, 0, 0.25) 50%);
-      background-size: 100% 4px;
-      z-index: 2;
-      pointer-events: none;
-    }
-    
     .crt::after {
       content: '';
       position: absolute;
@@ -130,388 +71,174 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.1);
-      opacity: 0.15;
-      z-index: 2;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.1) 2px,
+        transparent 2px,
+        transparent 4px
+      );
       pointer-events: none;
     }
-    
-    .status {
-      margin: 15px 0;
-      font-size: 16px;
-      color: #4caf50;
-      min-height: 20px;
-      font-weight: bold;
-    }
-    
-    .disclaimer, .controls, .error, .snes-note {
-      font-size: 14px;
-      margin-top: 20px;
-      color: #ccc;
-      line-height: 1.5;
-    }
-    
-    .error {
-      color: #ff5555;
-      background-color: rgba(255, 0, 0, 0.1);
-      padding: 10px;
-      border-radius: 4px;
-      border: 1px solid #ff5555;
-    }
-    
-    .snes-note {
-      color: #ffaa00;
-    }
-    
-    .controls {
-      background-color: #333;
-      padding: 15px;
-      border-radius: 6px;
-      margin-top: 20px;
-    }
-    
-    .controls p {
-      margin: 8px 0;
-    }
-    
-    .demo-roms {
-      margin-top: 15px;
-      font-size: 14px;
-      color: #aaa;
-    }
-    
-    .footer {
-      margin-top: 20px;
-      font-size: 12px;
-      color: #777;
-    }
-    
-    .instructions {
-      background-color: #2a2a2a;
-      padding: 15px;
-      border-radius: 6px;
-      margin: 15px 0;
-      text-align: left;
-    }
-    
-    .instructions h3 {
-      color: #4caf50;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    
-    @media (max-width: 700px) {
-      h1 {
-        font-size: 22px;
-      }
-      
-      .container {
-        padding: 10px;
-      }
-      
-      canvas {
-        width: 100%;
-        max-width: 400px;
-        height: auto;
-        aspect-ratio: 4/3;
-      }
-      
-      .game-btn {
-        min-width: 120px;
-        padding: 10px 15px;
-        font-size: 14px;
-      }
-    }
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="container">
-    <h1>🎮 RETRO GAME EMULATOR HUB 🎮</h1>
-    
-    <div class="game-selector">
-      <button class="game-btn active" data-game="demo">DEMO GAME</button>
-      <button class="game-btn" data-game="pong">PONG</button>
-      <button class="game-btn" data-game="snake">SNAKE</button>
-      <button class="game-btn" data-game="space">SPACE INVADERS</button>
+    <h1>Retro Game Emulator Hub</h1>
+    <input type="file" id="romInput" accept=".nes,.sfc,.smc" />
+    <div class="crt">
+      <canvas id="gameCanvas" width="256" height="224"></canvas>
     </div>
-    
-    <div class="file-input-container">
-      <input type="file" id="romInput" accept=".nes,.sfc,.smc" />
-    </div>
-    
-    <div class="status" id="statusMessage">Ready! Select a game above or load your own ROM</div>
-    
-    <div class="game-area crt">
-      <canvas id="gameCanvas" width="640" height="480"></canvas>
-    </div>
-    
-    <div class="instructions">
-      <h3>HOW TO PLAY</h3>
-      <p>1. Select a game from the buttons above</p>
-      <p>2. Use the controls below to play</p>
-      <p>3. Or load your own NES/SNES ROM file</p>
-    </div>
-    
-    <div class="controls">
-      <p><strong>CONTROLS:</strong></p>
-      <p>ARROWS: Move | Z: Action Button | X: Secondary Action | ENTER: Start | SHIFT: Select</p>
-    </div>
-    
     <div class="disclaimer">
-      <p><strong>LEGAL NOTICE:</strong> Upload only legally acquired NES or SNES ROMs that you own.</p>
+      <p><strong>Legal Notice:</strong> Upload only legally acquired NES or SNES ROMs that you own.</p>
     </div>
-    
+    <div class="controls">
+      <p><strong>Controls:</strong></p>
+      <p>Arrows: Move | Z: A | X: B | A: Y | S: X | Enter: Start | Shift: Select</p>
+    </div>
+    <div class="snes-note">
+      <p>SNES requires snes9x.js and snes9x.wasm in the same folder. NES should work now. Get SNES files from GitHub (search Snes9x-Next).</p>
+    </div>
     <div class="error" id="errorMessage" style="display: none;">
       <p id="errorText"></p>
     </div>
   </div>
 
-  <div class="footer">
-    <p>Retro Game Emulator Hub | Works in all modern browsers</p>
-  </div>
-
+  <script src="https://unpkg.com/jsnes@1.0.0/dist/jsnes.min.js"></script>
   <script>
-    // Game state
-    let currentGame = 'demo';
-    let gameInterval = null;
-    let canvas, ctx;
-    
-    // Initialize when page loads
-    window.addEventListener('load', function() {
-      canvas = document.getElementById('gameCanvas');
-      ctx = canvas.getContext('2d');
-      
-      // Set up game buttons
-      document.querySelectorAll('.game-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-          currentGame = this.getAttribute('data-game');
-          startGame(currentGame);
-        });
+    // Detect Edge browser
+    const isEdge = /Edg\//.test(navigator.userAgent);
+    if (isEdge) {
+      console.warn('Edge may block file inputs on file://. Use Firefox or place index.html and ROMs in the same folder (e.g., C:\\Games).');
+      showError('Edge may block file loading. Try Firefox or place ROMs in the same folder.');
+    }
+
+    // Initialize NES emulator
+    let nes, currentEmulator = null;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    try {
+      nes = new window.JSNES({
+        onFrame: (frameBuffer) => {
+          if (!ctx) {
+            showError('Canvas not supported. Use Firefox.');
+            return;
+          }
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const imageData = ctx.createImageData(256, 240);
+          const data = imageData.data;
+          for (let i = 0; i < frameBuffer.length; i++) {
+            const j = i * 4;
+            data[j] = frameBuffer[i] >> 16 & 0xff;
+            data[j + 1] = frameBuffer[i] >> 8 & 0xff;
+            data[j + 2] = frameBuffer[i] & 0xff;
+            data[j + 3] = 255;
+          }
+          ctx.putImageData(imageData, 0, 16);
+        },
+        onStatusUpdate: (text) => console.log('NES Status: ' + text),
+        onError: (error) => {
+          showError('Emulator error: ' + error + '. Try Firefox and Micro Mages from itch.io.');
+          console.error('JSNES error:', error);
+        }
       });
-      
-      // Set up file input
-      document.getElementById('romInput').addEventListener('change', handleRomUpload);
-      
-      // Start the demo game
-      startGame('demo');
-    });
-    
-    // Start the selected game
-    function startGame(game) {
-      // Clear any existing game interval
-      if (gameInterval) {
-        clearInterval(gameInterval);
-      }
-      
-      // Reset canvas
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Update status
-      updateStatus(`Starting ${game.toUpperCase()}...`);
-      hideError();
-      
-      // Start the selected game
-      switch(game) {
-        case 'demo':
-          startDemoGame();
-          break;
-        case 'pong':
-          startPongGame();
-          break;
-        case 'snake':
-          startSnakeGame();
-          break;
-        case 'space':
-          startSpaceInvadersGame();
-          break;
-      }
+    } catch (e) {
+      showError('NES emulator failed to initialize: ' + e.message + '. Use Firefox.');
+      console.error('NES init error:', e);
     }
-    
-    // Demo Game - A simple interactive demo
-    function startDemoGame() {
-      let x = 320, y = 240;
-      let dx = 2, dy = 2;
-      let size = 30;
-      let colorIndex = 0;
-      const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
-      
-      updateStatus('Demo Game Running - Use arrow keys to move the square!');
-      
-      gameInterval = setInterval(() => {
-        // Clear canvas
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw background pattern
-        ctx.strokeStyle = '#333';
-        for (let i = 0; i < canvas.width; i += 40) {
-          ctx.beginPath();
-          ctx.moveTo(i, 0);
-          ctx.lineTo(i, canvas.height);
-          ctx.stroke();
-        }
-        for (let i = 0; i < canvas.height; i += 40) {
-          ctx.beginPath();
-          ctx.moveTo(0, i);
-          ctx.lineTo(canvas.width, i);
-          ctx.stroke();
-        }
-        
-        // Draw moving square
-        ctx.fillStyle = colors[colorIndex];
-        ctx.fillRect(x, y, size, size);
-        
-        // Draw text
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '20px Courier New';
-        ctx.fillText('RETRO DEMO GAME', 200, 50);
-        ctx.font = '16px Courier New';
-        ctx.fillText('Use arrow keys to move!', 220, 80);
-        ctx.fillText('Press Z to change color!', 220, 110);
-        
-        // Move the square
-        x += dx;
-        y += dy;
-        
-        // Bounce off walls
-        if (x + size > canvas.width || x < 0) {
-          dx = -dx;
-          colorIndex = (colorIndex + 1) % colors.length;
-        }
-        if (y + size > canvas.height || y < 0) {
-          dy = -dy;
-          colorIndex = (colorIndex + 1) % colors.length;
-        }
-      }, 30);
+
+    // SNES placeholder
+    let snes = null;
+    function initSnes() {
+      showError('SNES requires snes9x.js and snes9x.wasm in the same folder. Use NES for now. Get files from GitHub (search Snes9x-Next).');
     }
-    
-    // Pong Game
-    function startPongGame() {
-      // Pong game implementation would go here
-      updateStatus('Pong Game - Coming Soon!');
-      
-      gameInterval = setInterval(() => {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '24px Courier New';
-        ctx.fillText('PONG GAME', 260, 200);
-        ctx.font = '18px Courier New';
-        ctx.fillText('Coming in the next update!', 190, 250);
-        ctx.fillText('Try the Demo Game for now', 190, 280);
-      }, 1000/60);
-    }
-    
-    // Snake Game
-    function startSnakeGame() {
-      // Snake game implementation would go here
-      updateStatus('Snake Game - Coming Soon!');
-      
-      gameInterval = setInterval(() => {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '24px Courier New';
-        ctx.fillText('SNAKE GAME', 250, 200);
-        ctx.font = '18px Courier New';
-        ctx.fillText('Coming in the next update!', 190, 250);
-        ctx.fillText('Try the Demo Game for now', 190, 280);
-      }, 1000/60);
-    }
-    
-    // Space Invaders Game
-    function startSpaceInvadersGame() {
-      // Space Invaders implementation would go here
-      updateStatus('Space Invaders - Coming Soon!');
-      
-      gameInterval = setInterval(() => {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '24px Courier New';
-        ctx.fillText('SPACE INVADERS', 220, 200);
-        ctx.font = '18px Courier New';
-        ctx.fillText('Coming in the next update!', 190, 250);
-        ctx.fillText('Try the Demo Game for now', 190, 280);
-      }, 1000/60);
-    }
-    
-    // Handle ROM file upload
-    function handleRomUpload(event) {
-      const file = event.target.files[0];
-      if (!file) {
-        showError('No file selected.');
-        return;
-      }
-      
-      const ext = file.name.toLowerCase().split('.').pop();
-      if (!['nes', 'sfc', 'smc'].includes(ext)) {
-        showError('Please upload a .nes, .sfc, or .smc file.');
-        return;
-      }
-      
-      updateStatus(`Loaded ROM: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
-      
-      // In a real implementation, we would load and run the ROM here
-      // For this demo, we'll just show a message
-      gameInterval = setInterval(() => {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '24px Courier New';
-        ctx.fillText('ROM LOADED!', 250, 200);
-        ctx.font = '18px Courier New';
-        ctx.fillText(`${file.name} (${ext.toUpperCase()})`, 220, 240);
-        ctx.fillText(`${(file.size/1024).toFixed(1)} KB`, 280, 270);
-        ctx.fillText('Full emulation would run here', 180, 300);
-      }, 1000/60);
-    }
-    
-    // Update status message
-    function updateStatus(text) {
-      document.getElementById('statusMessage').textContent = text;
-    }
-    
+
     // Show error message
     function showError(message) {
       const errorDiv = document.getElementById('errorMessage');
       const errorText = document.getElementById('errorText');
-      errorText.textContent = message;
+      errorText.textContent = 'Error: ' + message;
       errorDiv.style.display = 'block';
+      console.error(message);
     }
-    
-    // Hide error message
-    function hideError() {
-      document.getElementById('errorMessage').style.display = 'none';
-    }
-    
-    // Keyboard controls for the demo game
-    let keys = {};
-    
-    document.addEventListener('keydown', function(event) {
-      keys[event.key] = true;
-      
-      // Change color when Z is pressed
-      if (event.key === 'z' || event.key === 'Z') {
-        // This would be handled in the game loop
+
+    // Validate NES ROM
+    function isValidNesRom(data) {
+      if (data.length < 16) {
+        console.log('ROM too small:', data.length);
+        return false;
       }
-    });
-    
-    document.addEventListener('keyup', function(event) {
-      keys[event.key] = false;
-    });
-    
-    // Export keys for game use
-    window.getKeys = function() {
-      return keys;
-    };
-  </script>
-</body>
-</html>
+      const header = String.fromCharCode.apply(null, data.slice(0, 4));
+      if (header !== 'NES\x1a') {
+        console.log('Invalid NES header:', header);
+        return false;
+      }
+      const mapper = (data[6] >> 4) | (data[7] & 0xf0);
+      const supportedMappers = [0, 1, 2, 3, 4, 7];
+      if (!supportedMappers.includes(mapper)) {
+        console.log('Unsupported mapper:', mapper);
+        return false;
+      }
+      console.log('Valid NES ROM, mapper:', mapper);
+      return true;
+    }
+
+    // Handle ROM upload
+    document.getElementById('romInput').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        showError('No file selected. Try Firefox.');
+        return;
+      }
+
+      const ext = file.name.toLowerCase().split('.').pop();
+      if (!['nes', 'sfc', 'smc'].includes(ext)) {
+        showError('Upload a .nes, .sfc, or .smc file.');
+        return;
+      }
+
+      if (file.size < 1024 || file.size > 2 * 1024 * 1024) {
+        showError('Invalid size. ROMs should be 1KB to 2MB.');
+        console.log('File size:', file.size);
+        return;
+      }
+
+      console.log('Loading file:', file.name, 'Size:', file.size, 'Ext:', ext);
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            showError('Empty or invalid ROM file.');
+            return;
+          }
+          const uint8Array = new Uint8Array(arrayBuffer);
+
+          if (currentEmulator) {
+            if (currentEmulator === nes) {
+              nes.stop();
+              nes.cpu.reset();
+              nes.ppu.reset();
+              nes.mmap.reset();
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              console.log('Emulator reset');
+            }
+            currentEmulator = null;
+          }
+
+          if (ext === 'nes') {
+            if (!isValidNesRom(uint8Array)) {
+              showError('Invalid NES ROM or unsupported mapper. Download Micro Mages from itch.io and try in Firefox.');
+              return;
+            }
+            console.log('Starting NES ROM:', file.name);
+            nes.loadROM(uint8Array);
+            setTimeout(() => {
+              try {
+                nes.start();
+                currentEmulator = nes;
+                document.getElementById('errorMessage').style.display = 'none';
+                console.log('NES started
