@@ -47,10 +47,13 @@
       border-radius: 4px;
       font-family: 'Press Start 2P', cursive;
     }
-    .disclaimer, .controls {
+    .disclaimer, .controls, .error {
       font-size: 12px;
       margin-top: 20px;
       color: #ccc;
+    }
+    .error {
+      color: #ff5555;
     }
     .controls p {
       margin: 5px 0;
@@ -60,7 +63,7 @@
       font-size: 14px;
       margin-top: 20px;
     }
-    /* CRT effect (optional) */
+    /* CRT effect */
     .crt {
       position: relative;
     }
@@ -91,7 +94,7 @@
       <canvas id="nesCanvas" width="256" height="240"></canvas>
     </div>
     <div class="disclaimer">
-      <p><strong>Legal Notice:</strong> Please upload only legally acquired NES ROMs that you own. This site does not host or distribute ROMs.</p>
+      <p><strong>Legal Notice:</strong> Upload only legally acquired NES ROMs that you own. This site does not host or distribute ROMs.</p>
     </div>
     <div class="controls">
       <p><strong>Controls:</strong></p>
@@ -100,35 +103,61 @@
     <div class="snes-placeholder">
       <p>SNES support coming soon! Upload NES ROMs for now.</p>
     </div>
+    <div class="error" id="errorMessage" style="display: none;">
+      <p>Error: Unable to load ROM. Try using Firefox or a legal .nes file.</p>
+    </div>
   </div>
 
   <script src="https://unpkg.com/jsnes@1.0.0/dist/jsnes.min.js"></script>
   <script>
     // Initialize JSNES
-    const nes = new window.JSNES({
-      onFrame: (frameBuffer) => {
-        const canvas = document.getElementById('nesCanvas');
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.createImageData(256, 240); // NES resolution
-        const data = imageData.data;
+    let nes;
+    try {
+      nes = new window.JSNES({
+        onFrame: (frameBuffer) => {
+          const canvas = document.getElementById('nesCanvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            showError('Canvas not supported in this browser.');
+            return;
+          }
+          const imageData = ctx.createImageData(256, 240);
+          const data = imageData.data;
 
-        // Convert frame buffer to canvas pixels
-        for (let i = 0; i < frameBuffer.length; i++) {
-          const j = i * 4;
-          data[j] = frameBuffer[i] >> 16 & 0xff; // Red
-          data[j + 1] = frameBuffer[i] >> 8 & 0xff; // Green
-          data[j + 2] = frameBuffer[i] & 0xff; // Blue
-          data[j + 3] = 255; // Alpha
-        }
-        ctx.putImageData(imageData, 0, 0);
-      },
-      onStatusUpdate: (text) => console.log(text), // Debug logs
-    });
+          for (let i = 0; i < frameBuffer.length; i++) {
+            const j = i * 4;
+            data[j] = frameBuffer[i] >> 16 & 0xff; // Red
+            data[j + 1] = frameBuffer[i] >> 8 & 0xff; // Green
+            data[j + 2] = frameBuffer[i] & 0xff; // Blue
+            data[j + 3] = 255; // Alpha
+          }
+          ctx.putImageData(imageData, 0, 0);
+        },
+        onStatusUpdate: (text) => console.log(text),
+      });
+    } catch (e) {
+      showError('Failed to initialize emulator: ' + e.message);
+    }
+
+    // Show error message
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = 'Error: ' + message;
+      errorDiv.style.display = 'block';
+    }
 
     // Handle ROM upload
     document.getElementById('romInput').addEventListener('change', (event) => {
       const file = event.target.files[0];
-      if (!file) return;
+      if (!file) {
+        showError('No file selected.');
+        return;
+      }
+
+      if (!file.name.endsWith('.nes')) {
+        showError('Please upload a valid .nes file.');
+        return;
+      }
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -137,10 +166,12 @@
           const uint8Array = new Uint8Array(arrayBuffer);
           nes.loadROM(uint8Array);
           nes.start();
+          document.getElementById('errorMessage').style.display = 'none';
         } catch (error) {
-          alert('Error loading ROM: ' + error.message);
+          showError('Error loading ROM: ' + error.message);
         }
       };
+      reader.onerror = () => showError('Failed to read file.');
       reader.readAsArrayBuffer(file);
     });
 
@@ -158,7 +189,7 @@
 
     document.addEventListener('keydown', (event) => {
       const button = keyMap[event.keyCode];
-      if (button) {
+      if (button && nes) {
         nes.buttonDown(1, button);
         event.preventDefault();
       }
@@ -166,7 +197,7 @@
 
     document.addEventListener('keyup', (event) => {
       const button = keyMap[event.keyCode];
-      if (button) {
+      if (button && nes) {
         nes.buttonUp(1, button);
         event.preventDefault();
       }
