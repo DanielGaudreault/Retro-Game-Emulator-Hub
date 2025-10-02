@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebNES - FCEUX-like NES Emulator</title>
+    <script src="https://unpkg.com/jsnes@1.0.0/dist/jsnes.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -507,7 +508,7 @@
                             <input type="text" class="cheat-address" placeholder="Address">
                             <input type="text" class="cheat-value" placeholder="Value">
                             <input type="text" class="cheat-description" placeholder="Description">
-                            <button class="tool-button">Add</button>
+                            <button class="tool-button" onclick="addCheat()">Add</button>
                         </div>
                         <div id="cheatList" style="margin-top: 10px;">
                             No cheats active
@@ -522,35 +523,35 @@
                         <div class="input-config">
                             <div class="input-row">
                                 <span>Up</span>
-                                <button class="input-button">ArrowUp</button>
+                                <button class="input-button" data-button="up">ArrowUp</button>
                             </div>
                             <div class="input-row">
                                 <span>Down</span>
-                                <button class="input-button">ArrowDown</button>
+                                <button class="input-button" data-button="down">ArrowDown</button>
                             </div>
                             <div class="input-row">
                                 <span>Left</span>
-                                <button class="input-button">ArrowLeft</button>
+                                <button class="input-button" data-button="left">ArrowLeft</button>
                             </div>
                             <div class="input-row">
                                 <span>Right</span>
-                                <button class="input-button">ArrowRight</button>
+                                <button class="input-button" data-button="right">ArrowRight</button>
                             </div>
                             <div class="input-row">
                                 <span>A</span>
-                                <button class="input-button">Z</button>
+                                <button class="input-button" data-button="a">Z</button>
                             </div>
                             <div class="input-row">
                                 <span>B</span>
-                                <button class="input-button">X</button>
+                                <button class="input-button" data-button="b">X</button>
                             </div>
                             <div class="input-row">
                                 <span>Start</span>
-                                <button class="input-button">Enter</button>
+                                <button class="input-button" data-button="start">Enter</button>
                             </div>
                             <div class="input-row">
                                 <span>Select</span>
-                                <button class="input-button">Shift</button>
+                                <button class="input-button" data-button="select">Shift</button>
                             </div>
                         </div>
                     </div>
@@ -560,10 +561,10 @@
 
         <!-- Status Bar -->
         <div class="status-bar">
-            <div class="status-item">Ready</div>
+            <div class="status-item" id="statusMessage">Ready</div>
             <div class="status-item">FPS: <span id="fpsCounter">0</span></div>
             <div class="status-item">Frame: <span id="frameCounter">0</span></div>
-            <div class="status-item">Power: Off</div>
+            <div class="status-item">Power: <span id="powerStatus">Off</span></div>
         </div>
     </div>
 
@@ -584,7 +585,8 @@
             paused: false,
             romName: '',
             fps: 0,
-            frameCount: 0
+            frameCount: 0,
+            lastFrameTime: 0
         };
 
         // DOM Elements
@@ -593,43 +595,68 @@
         const gameInfo = document.getElementById('gameInfo');
         const fileDialog = document.getElementById('fileDialog');
         const romFileInput = document.getElementById('romFileInput');
+        const statusMessage = document.getElementById('statusMessage');
+        const powerStatus = document.getElementById('powerStatus');
+
+        // Initialize JSNES emulator
+        const nes = new JSNES({
+            onFrame: function(frameBuffer) {
+                // Convert frame buffer (RGB array) to canvas
+                const imageData = ctx.createImageData(256, 240);
+                for (let i = 0; i < frameBuffer.length; i++) {
+                    imageData.data[i * 4 + 0] = (frameBuffer[i] >> 16) & 0xFF; // R
+                    imageData.data[i * 4 + 1] = (frameBuffer[i] >> 8) & 0xFF;  // G
+                    imageData.data[i * 4 + 2] = frameBuffer[i] & 0xFF;        // B
+                    imageData.data[i * 4 + 3] = 255;                          // A
+                }
+                ctx.putImageData(imageData, 0, 0);
+                emulatorState.frameCount++;
+                updateDebugInfo();
+            },
+            onStatusUpdate: function(status) {
+                statusMessage.textContent = status;
+            },
+            sampleRate: 44100,
+            emulateSound: true // Enable audio
+        });
+
+        // Emulation loop
+        function emulationLoop(timestamp) {
+            if (emulatorState.loaded && !emulatorState.paused) {
+                nes.frame();
+                // Calculate FPS
+                if (emulatorState.lastFrameTime) {
+                    emulatorState.fps = 1000 / (timestamp - emulatorState.lastFrameTime);
+                }
+                emulatorState.lastFrameTime = timestamp;
+            }
+            requestAnimationFrame(emulationLoop);
+        }
+
+        // Start emulation loop
+        requestAnimationFrame(emulationLoop);
 
         // Initialize canvas
         function initializeCanvas() {
-            // Create a simple NES-like display
-            const width = 256;
-            const height = 240;
-            
-            // Fill with NES gray background
             ctx.fillStyle = '#6D6D6D';
-            ctx.fillRect(0, 0, width, height);
-            
-            // Draw some placeholder graphics
-            ctx.fillStyle = '#8B0000';
-            ctx.fillRect(80, 100, 96, 40);
-            
+            ctx.fillRect(0, 0, 256, 240);
             ctx.fillStyle = '#FFFFFF';
             ctx.font = '12px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('FCEUX Web Emulator', width/2, 120);
-            ctx.fillText('Load a ROM to begin', width/2, 140);
+            ctx.fillText('FCEUX Web Emulator', 128, 120);
+            ctx.fillText('Load a ROM to begin', 128, 140);
         }
 
         // Panel management
         function switchPanel(panelName) {
-            // Hide all panels
             document.querySelectorAll('.panel-content').forEach(panel => {
                 panel.style.display = 'none';
             });
-            
-            // Remove active class from all tabs
             document.querySelectorAll('.panel-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
-            // Show selected panel and activate tab
             document.getElementById(panelName + 'Panel').style.display = 'block';
-            event.target.classList.add('active');
+            document.querySelector(`.panel-tab[onclick="switchPanel('${panelName}')"]`).classList.add('active');
         }
 
         // File operations
@@ -639,121 +666,62 @@
 
         function closeFileDialog() {
             fileDialog.style.display = 'none';
+            romFileInput.value = ''; // Clear file input
         }
 
         function loadSelectedROM() {
             const file = romFileInput.files[0];
-            if (file) {
-                const fileName = file.name;
-                emulatorState.romName = fileName;
-                emulatorState.loaded = true;
-                
-                // Update UI
-                gameInfo.textContent = `ROM: ${fileName}`;
-                document.querySelector('.status-bar .status-item').textContent = `Playing: ${fileName}`;
-                
-                // Simulate ROM loading
-                simulateROMLoading();
-                
-                closeFileDialog();
+            if (!file) {
+                alert('Please select a ROM file.');
+                return;
             }
-        }
+            const fileName = file.name;
+            emulatorState.romName = fileName;
+            emulatorState.loaded = true;
 
-        function simulateROMLoading() {
-            // Clear canvas and show loading message
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, nesCanvas.width, nesCanvas.height);
-            
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Loading: ${emulatorState.romName}`, nesCanvas.width/2, nesCanvas.height/2 - 20);
-            ctx.fillText('Simulating NES startup...', nesCanvas.width/2, nesCanvas.height/2);
-            
-            // After a delay, show the "game"
-            setTimeout(() => {
-                startGameSimulation();
-            }, 2000);
-        }
-
-        function startGameSimulation() {
-            // Create a simple animated display to simulate a game
-            let frame = 0;
-            
-            function animate() {
-                if (!emulatorState.loaded || emulatorState.paused) return;
-                
-                // Clear canvas
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, nesCanvas.width, nesCanvas.height);
-                
-                // Draw some animated elements
-                const time = Date.now() / 1000;
-                
-                // Background
-                for (let y = 0; y < 240; y += 16) {
-                    for (let x = 0; x < 256; x += 16) {
-                        const hue = (x + y + time * 50) % 360;
-                        ctx.fillStyle = `hsl(${hue}, 50%, 30%)`;
-                        ctx.fillRect(x, y, 16, 16);
-                    }
+            // Read the ROM file as binary
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const romData = new Uint8Array(e.target.result);
+                try {
+                    nes.loadROM(romData);
+                    nes.frame(); // Start emulation
+                    gameInfo.textContent = `ROM: ${fileName}`;
+                    statusMessage.textContent = `Playing: ${fileName}`;
+                    powerStatus.textContent = 'On';
+                    closeFileDialog();
+                } catch (error) {
+                    alert('Error loading ROM: ' + error.message);
+                    emulatorState.loaded = false;
+                    gameInfo.textContent = 'No ROM loaded';
+                    statusMessage.textContent = 'Ready';
+                    powerStatus.textContent = 'Off';
+                    initializeCanvas();
                 }
-                
-                // Moving sprite
-                const spriteX = 128 + Math.sin(time) * 100;
-                const spriteY = 120 + Math.cos(time * 0.7) * 80;
-                
-                ctx.fillStyle = '#FF4444';
-                ctx.fillRect(spriteX - 8, spriteY - 8, 16, 16);
-                
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillText('NES Game Simulation', 128, 20);
-                ctx.fillText(`Frame: ${frame++}`, 128, 220);
-                
-                // Update debug info
-                updateDebugInfo();
-                
-                requestAnimationFrame(animate);
-            }
-            
-            animate();
-        }
-
-        function updateDebugInfo() {
-            // Update register values with simulated data
-            document.getElementById('regPC').textContent = 
-                (0x8000 + Math.floor(Math.random() * 0x7FFF)).toString(16).toUpperCase();
-            document.getElementById('regA').textContent = 
-                Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
-            document.getElementById('regX').textContent = 
-                Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
-            document.getElementById('regY').textContent = 
-                Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
-            document.getElementById('regSP').textContent = 
-                Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
-            document.getElementById('regP').textContent = 
-                Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
-            
-            // Update PPU info
-            document.getElementById('ppuScanline').textContent = Math.floor(Math.random() * 240);
-            document.getElementById('ppuCycle').textContent = Math.floor(Math.random() * 341);
-            document.getElementById('ppuFrame').textContent = emulatorState.frameCount++;
-            
-            // Update FPS
-            document.getElementById('fpsCounter').textContent = Math.floor(60 + Math.random() * 10);
-            document.getElementById('frameCounter').textContent = emulatorState.frameCount;
+            };
+            reader.onerror = function() {
+                alert('Error reading ROM file.');
+                emulatorState.loaded = false;
+                gameInfo.textContent = 'No ROM loaded';
+                statusMessage.textContent = 'Ready';
+                powerStatus.textContent = 'Off';
+                initializeCanvas();
+            };
+            reader.readAsArrayBuffer(file);
         }
 
         // Emulation control
         function togglePause() {
+            if (!emulatorState.loaded) return;
             emulatorState.paused = !emulatorState.paused;
             document.querySelector('.toolbar .tool-button:nth-child(2)').textContent = 
                 emulatorState.paused ? 'Resume' : 'Pause';
+            statusMessage.textContent = emulatorState.paused ? `Paused: ${emulatorState.romName}` : `Playing: ${emulatorState.romName}`;
         }
 
         function resetNES() {
             if (emulatorState.loaded) {
-                // Simulate reset
+                nes.reset();
                 emulatorState.frameCount = 0;
                 alert('NES Reset');
             }
@@ -761,7 +729,7 @@
 
         function powerCycle() {
             if (emulatorState.loaded) {
-                // Simulate power cycle
+                nes.reloadROM();
                 emulatorState.frameCount = 0;
                 alert('NES Power Cycled');
             }
@@ -769,6 +737,7 @@
 
         function softReset() {
             if (emulatorState.loaded) {
+                nes.reset();
                 alert('Soft Reset (Select+Start)');
             }
         }
@@ -776,76 +745,240 @@
         // State management
         function saveState() {
             if (emulatorState.loaded) {
+                const state = nes.toJSON();
+                localStorage.setItem('nesState', JSON.stringify(state));
                 alert('Game state saved to slot 0');
             }
         }
 
         function loadState() {
             if (emulatorState.loaded) {
-                alert('Game state loaded from slot 0');
+                const state = localStorage.getItem('nesState');
+                if (state) {
+                    nes.fromJSON(JSON.parse(state));
+                    alert('Game state loaded from slot 0');
+                } else {
+                    alert('No saved state found');
+                }
             }
         }
 
         // Debug tools
+        function updateDebugInfo() {
+            if (!emulatorState.loaded) return;
+            // Update CPU registers
+            document.getElementById('regPC').textContent = 
+                nes.cpu.PC.toString(16).padStart(4, '0').toUpperCase();
+            document.getElementById('regA').textContent = 
+                nes.cpu.A.toString(16).padStart(2, '0').toUpperCase();
+            document.getElementById('regX').textContent = 
+                nes.cpu.X.toString(16).padStart(2, '0').toUpperCase();
+            document.getElementById('regY').textContent = 
+                nes.cpu.Y.toString(16).padStart(2, '0').toUpperCase();
+            document.getElementById('regSP').textContent = 
+                nes.cpu.SP.toString(16).padStart(2, '0').toUpperCase();
+            document.getElementById('regP').textContent = 
+                nes.cpu.P.toString(16).padStart(2, '0').toUpperCase();
+            document.getElementById('regCycles').textContent = nes.cpu.cycles;
+
+            // PPU info (JSNES has limited PPU access, so simulate for now)
+            document.getElementById('ppuScanline').textContent = Math.floor(Math.random() * 240);
+            document.getElementById('ppuCycle').textContent = Math.floor(Math.random() * 341);
+            document.getElementById('ppuFrame').textContent = emulatorState.frameCount;
+
+            // Update FPS and frame count
+            document.getElementById('fpsCounter').textContent = Math.floor(emulatorState.fps);
+            document.getElementById('frameCounter').textContent = emulatorState.frameCount;
+        }
+
+        // Input handling
+        let inputMapping = {
+            'ArrowUp': JSNES.Controller.BUTTON_UP,
+            'ArrowDown': JSNES.Controller.BUTTON_DOWN,
+            'ArrowLeft': JSNES.Controller.BUTTON_LEFT,
+            'ArrowRight': JSNES.Controller.BUTTON_RIGHT,
+            'z': JSNES.Controller.BUTTON_A,
+            'x': JSNES.Controller.BUTTON_B,
+            'Enter': JSNES.Controller.BUTTON_START,
+            'Shift': JSNES.Controller.BUTTON_SELECT
+        };
+
+        // Map button names to input configuration
+        const buttonToName = {
+            up: 'ArrowUp',
+            down: 'ArrowDown',
+            left: 'ArrowLeft',
+            right: 'ArrowRight',
+            a: 'Z',
+            b: 'X',
+            start: 'Enter',
+            select: 'Shift'
+        };
+
+        // Handle input configuration
+        let awaitingKey = null;
+        document.querySelectorAll('.input-button').forEach(button => {
+            button.addEventListener('click', () => {
+                awaitingKey = button.dataset.button;
+                button.textContent = 'Press a key...';
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (awaitingKey) {
+                // Update input mapping
+                const buttonElement = document.querySelector(`.input-button[data-button="${awaitingKey}"]`);
+                inputMapping[e.key] = inputMapping[buttonToName[awaitingKey]];
+                delete inputMapping[buttonToName[awaitingKey]];
+                buttonElement.textContent = e.key;
+                buttonToName[awaitingKey] = e.key;
+                awaitingKey = null;
+                e.preventDefault();
+                return;
+            }
+
+            if (emulatorState.loaded && !emulatorState.paused) {
+                const button = inputMapping[e.key];
+                if (button !== undefined) {
+                    nes.buttonDown(1, button);
+                    e.preventDefault(); // Prevent browser scrolling
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (emulatorState.loaded && !emulatorState.paused) {
+                const button = inputMapping[e.key];
+                if (button !== undefined) {
+                    nes.buttonUp(1, button);
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // Cheat handling
+        const cheats = [];
+        function addCheat() {
+            const addressInput = document.querySelector('.cheat-address');
+            const valueInput = document.querySelector('.cheat-value');
+            const descriptionInput = document.querySelector('.cheat-description');
+            const address = parseInt(addressInput.value, 16);
+            const value = parseInt(valueInput.value, 16);
+
+            if (!isNaN(address) && !isNaN(value) && address >= 0 && address <= 0xFFFF && value >= 0 && value <= 0xFF) {
+                cheats.push({ address, value, description: descriptionInput.value || 'Cheat' });
+                updateCheatList();
+                nes.cpu.write(address, value);
+                addressInput.value = '';
+                valueInput.value = '';
+                descriptionInput.value = '';
+            } else {
+                alert('Invalid address or value. Use hex format (e.g., 00FF, 7F).');
+            }
+        }
+
+        function updateCheatList() {
+            const cheatList = document.getElementById('cheatList');
+            if (cheats.length === 0) {
+                cheatList.textContent = 'No cheats active';
+            } else {
+                cheatList.innerHTML = cheats.map(cheat => 
+                    `<div>${cheat.description}: $${cheat.address.toString(16).padStart(4, '0').toUpperCase()} = ${cheat.value.toString(16).padStart(2, '0').toUpperCase()}</div>`
+                ).join('');
+            }
+        }
+
+        // Other utility functions
         function toggleDebugger() {
             alert('Debugger window would open here');
+        }
+
+        function togglePPUViewer() {
+            alert('PPU Viewer would open here');
+        }
+
+        function toggleNametables() {
+            alert('Nametable Viewer would open here');
         }
 
         function openHexEditor() {
             alert('Hex Editor would open here');
         }
 
+        function openTraceLogger() {
+            alert('Trace Logger would open here');
+        }
+
         function openMemoryViewer() {
             switchPanel('memory');
         }
 
-        function addBreakpoint() {
-            const address = prompt('Enter breakpoint address (hex):');
-            if (address) {
-                alert(`Breakpoint set at $${address}`);
-            }
+        function openCodeDataLogger() {
+            alert('Code/Data Logger would open here');
         }
 
-        // Configuration
+        function openGameGenie() {
+            alert('Game Genie would open here');
+        }
+
         function openInputConfig() {
             switchPanel('input');
+        }
+
+        function openVideoConfig() {
+            alert('Video Config would open here');
+        }
+
+        function openAudioConfig() {
+            alert('Audio Config would open here');
         }
 
         function openCheatConfig() {
             switchPanel('cheats');
         }
 
-        // Utility functions
         function toggleFPS() {
             const fpsCounter = document.getElementById('fpsCounter').parentElement;
             fpsCounter.style.display = fpsCounter.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleFrameSkip() {
+            alert('Frame Skip toggle would be implemented here');
+        }
+
+        function addBreakpoint() {
+            const address = prompt('Enter breakpoint address (hex):');
+            if (address && !isNaN(parseInt(address, 16))) {
+                document.getElementById('breakpointList').textContent = `Breakpoint at $${address}`;
+            } else {
+                alert('Invalid address. Use hex format (e.g., 00FF).');
+            }
         }
 
         function closeROM() {
             if (emulatorState.loaded) {
                 emulatorState.loaded = false;
                 emulatorState.romName = '';
+                emulatorState.paused = false;
+                nes.stop();
                 gameInfo.textContent = 'No ROM loaded';
-                document.querySelector('.status-bar .status-item').textContent = 'Ready';
+                statusMessage.textContent = 'Ready';
+                powerStatus.textContent = 'Off';
+                document.querySelector('.toolbar .tool-button:nth-child(2)').textContent = 'Pause';
                 initializeCanvas();
             }
         }
 
         function exitEmulator() {
             if (confirm('Are you sure you want to exit?')) {
-                // In a real app, this would close the window
+                closeROM();
                 alert('Emulator would exit now');
             }
         }
 
-        // Initialize the emulator
-        initializeCanvas();
-
-        // Simulate some debug info updates
-        setInterval(updateDebugInfo, 100);
-
-        // Add some sample memory data
+        // Memory viewer
         function updateMemoryViewer() {
+            if (!emulatorState.loaded) return;
             const viewer = document.getElementById('memoryViewer');
             let html = '';
             for (let i = 0; i < 16; i++) {
@@ -853,7 +986,7 @@
                 let hex = '';
                 let ascii = '';
                 for (let j = 0; j < 16; j++) {
-                    const val = Math.floor(Math.random() * 256);
+                    const val = nes.cpu.read(addr + j) || 0;
                     hex += val.toString(16).padStart(2, '0').toUpperCase() + ' ';
                     ascii += val >= 32 && val <= 126 ? String.fromCharCode(val) : '.';
                 }
@@ -862,8 +995,10 @@
             viewer.innerHTML = html;
         }
 
+        // Initialize the emulator
+        initializeCanvas();
         setInterval(updateMemoryViewer, 1000);
-        updateMemoryViewer();
+        setInterval(updateDebugInfo, 100);
     </script>
 </body>
 </html>
