@@ -45,22 +45,29 @@ const upload = multer({
     }
 });
 
-// ROM database (in production, use a real database)
+// ROM database for identification
 const romDatabase = {
-    'super-mario-bros.nes': { name: 'Super Mario Bros', system: 'NES' },
-    'zelda.nes': { name: 'The Legend of Zelda', system: 'NES' },
-    'pokemon-red.gb': { name: 'Pokemon Red', system: 'Game Boy' },
-    // Add more ROM signatures as needed
+    'super-mario-bros': { name: 'Super Mario Bros', system: 'NES' },
+    'mario-bros': { name: 'Super Mario Bros', system: 'NES' },
+    'zelda': { name: 'The Legend of Zelda', system: 'NES' },
+    'pokemon-red': { name: 'Pokemon Red', system: 'Game Boy' },
+    'pokemon-blue': { name: 'Pokemon Blue', system: 'Game Boy' },
+    'sonic': { name: 'Sonic the Hedgehog', system: 'Genesis' },
+    'contra': { name: 'Contra', system: 'NES' },
+    'metroid': { name: 'Metroid', system: 'NES' },
+    'donkey-kong': { name: 'Donkey Kong', system: 'NES' },
+    'final-fantasy': { name: 'Final Fantasy', system: 'NES' }
 };
 
 // Helper function to identify ROM
-function identifyROM(filename, buffer) {
-    // Simple identification by filename (in production, use proper ROM header parsing)
-    const knownRoms = Object.keys(romDatabase);
-    const found = knownRoms.find(rom => filename.toLowerCase().includes(rom.replace('.nes', '').replace('.gb', '')));
+function identifyROM(filename) {
+    const nameWithoutExt = path.basename(filename, path.extname(filename)).toLowerCase();
     
-    if (found) {
-        return romDatabase[found];
+    // Check for known games
+    for (const [key, info] of Object.entries(romDatabase)) {
+        if (nameWithoutExt.includes(key)) {
+            return info;
+        }
     }
     
     // Fallback: extract name from filename
@@ -68,7 +75,24 @@ function identifyROM(filename, buffer) {
         .replace(/[-_]/g, ' ')
         .replace(/\b\w/g, l => l.toUpperCase());
     
-    return { name: name, system: 'Unknown' };
+    // Determine system from file extension
+    const ext = path.extname(filename).toLowerCase();
+    const systemMap = {
+        '.nes': 'NES',
+        '.gb': 'Game Boy',
+        '.gbc': 'Game Boy Color',
+        '.gba': 'Game Boy Advance',
+        '.smc': 'SNES',
+        '.sfc': 'SNES',
+        '.md': 'Sega Genesis',
+        '.gen': 'Sega Genesis',
+        '.a26': 'Atari 2600'
+    };
+    
+    return { 
+        name: name, 
+        system: systemMap[ext] || 'Unknown System'
+    };
 }
 
 // Routes
@@ -79,7 +103,7 @@ app.post('/api/upload', upload.single('rom'), (req, res) => {
         }
 
         // Identify the ROM
-        const romInfo = identifyROM(req.file.originalname, req.file.buffer);
+        const romInfo = identifyROM(req.file.originalname);
 
         res.json({
             success: true,
@@ -133,7 +157,7 @@ app.get('/api/roms', (req, res) => {
 
         const files = fs.readdirSync(uploadDir);
         const roms = files.map(file => {
-            const romInfo = identifyROM(file, null);
+            const romInfo = identifyROM(file);
             return {
                 filename: file,
                 name: romInfo.name,
@@ -164,7 +188,13 @@ app.delete('/api/roms/:filename', (req, res) => {
     }
 });
 
+// Serve the main page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Access the application at: http://localhost:${PORT}`);
+    console.log(`🎮 Retro ROM Player Server running on port ${PORT}`);
+    console.log(`📍 Access the application at: http://localhost:${PORT}`);
+    console.log(`📁 Uploads directory: ${path.join(__dirname, 'uploads')}`);
 });
