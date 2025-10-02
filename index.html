@@ -3,7 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebNES - Self-Contained NES Emulator</title>
+    <title>WebNES - Enhanced Emulator</title>
+    <script>
+        // Embedded JSNES library (base64-encoded)
+        (function() {
+            const base64JSNES = "YOUR_BASE64_STRING_HERE"; // Replace with base64-encoded jsnes.min.js
+            try {
+                const script = document.createElement('script');
+                script.textContent = atob(base64JSNES);
+                document.head.appendChild(script);
+                console.log('JSNES embedded script loaded');
+            } catch (e) {
+                console.error('Failed to decode JSNES:', e);
+                alert('Failed to load JSNES library: ' + e.message);
+            }
+        })();
+    </script>
     <style>
         * {
             margin: 0;
@@ -11,871 +26,238 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
         body {
             background: #1a1a1a;
             color: #e0e0e0;
-            overflow: hidden;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            padding: 20px;
-            gap: 20px;
-        }
-
-        .header {
-            text-align: center;
-            padding: 10px;
-            background: #2a2a2a;
-            border-radius: 8px;
-        }
-
-        .header h1 {
-            color: #fff;
-            font-size: 24px;
-        }
-
-        .main-content {
-            flex: 1;
-            display: flex;
-            gap: 20px;
-        }
-
-        .game-area {
-            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            padding: 20px;
         }
-
-        .game-screen {
+        canvas {
             background: #000;
             border: 4px solid #444;
             border-radius: 8px;
-            position: relative;
-        }
-
-        #nesCanvas {
-            display: block;
             image-rendering: pixelated;
             width: 512px;
             height: 480px;
         }
-
-        .screen-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-
         .controls {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
+            margin-top: 10px;
         }
-
         .btn {
-            background: #444;
+            background: #0078d7;
             border: none;
             color: white;
             padding: 12px 24px;
             cursor: pointer;
             border-radius: 6px;
             font-size: 14px;
-            transition: background 0.2s;
         }
-
         .btn:hover {
-            background: #555;
+            background: #106ebe;
         }
-
         .btn:disabled {
             background: #333;
             color: #666;
             cursor: not-allowed;
         }
-
-        .btn-primary {
-            background: #0078d7;
-        }
-
-        .btn-primary:hover {
-            background: #106ebe;
-        }
-
-        .info-panel {
-            width: 400px;
-            background: #2a2a2a;
-            border-radius: 8px;
-            padding: 20px;
-        }
-
-        .panel-section {
-            margin-bottom: 20px;
-        }
-
-        .panel-title {
-            color: #fff;
-            font-size: 16px;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #444;
-        }
-
-        .status-item {
-            margin-bottom: 8px;
+        .status {
+            margin-top: 10px;
             font-size: 14px;
         }
-
-        .status-value {
-            color: #4CAF50;
-            font-weight: bold;
-        }
-
-        .instructions {
-            background: #333;
-            padding: 15px;
-            border-radius: 6px;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-
-        .key {
-            display: inline-block;
-            background: #444;
-            padding: 2px 6px;
-            border-radius: 3px;
-            border: 1px solid #666;
-            font-family: monospace;
-            margin: 2px;
-        }
-
         .message {
             padding: 10px;
             border-radius: 4px;
             margin: 5px 0;
         }
-
-        .message.info {
-            background: rgba(33, 150, 243, 0.1);
-            border: 1px solid #2196F3;
-            color: #64B5F6;
-        }
-
         .message.success {
             background: rgba(76, 175, 80, 0.1);
             border: 1px solid #4CAF50;
             color: #81C784;
         }
-
         .message.error {
             background: rgba(244, 67, 54, 0.1);
             border: 1px solid #F44336;
             color: #E57373;
         }
-
-        .message.warning {
-            background: rgba(255, 152, 0, 0.1);
-            border: 1px solid #FF9800;
-            color: #FFB74D;
-        }
-
-        .rom-info {
-            background: #333;
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-            font-size: 11px;
-            font-family: monospace;
-        }
-
-        .demo-games {
-            display: flex;
-            gap: 10px;
-            margin: 15px 0;
-        }
-
-        .demo-game-btn {
-            background: #555;
-            border: none;
-            color: white;
-            padding: 10px;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 12px;
-            flex: 1;
-            text-align: center;
-        }
-
-        .demo-game-btn:hover {
-            background: #666;
-        }
-
-        .demo-game-btn.active {
-            background: #0078d7;
-        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎮 WebNES - Self-Contained Emulator</h1>
-        </div>
-
-        <div class="main-content">
-            <div class="game-area">
-                <div class="game-screen">
-                    <canvas id="nesCanvas" width="256" height="240"></canvas>
-                    <div class="screen-overlay" id="screenOverlay">
-                        <h2>WebNES Emulator</h2>
-                        <p>No external dependencies - 100% working</p>
-                        <div style="margin: 20px 0;">
-                            <button class="btn btn-primary" onclick="loadDemoGame('mario')">
-                                🎮 Play Super Mario Demo
-                            </button>
-                        </div>
-                        <div class="demo-games">
-                            <button class="demo-game-btn" onclick="loadDemoGame('mario')">Mario</button>
-                            <button class="demo-game-btn" onclick="loadDemoGame('zelda')">Zelda</button>
-                            <button class="demo-game-btn" onclick="loadDemoGame('megaman')">Mega Man</button>
-                            <button class="demo-game-btn" onclick="loadDemoGame('metroid')">Metroid</button>
-                        </div>
-                        <div class="instructions">
-                            <strong>Controls:</strong> <span class="key">Arrows</span> <span class="key">Z</span> <span class="key">X</span> <span class="key">Enter</span> <span class="key">Shift</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="controls">
-                    <button class="btn" onclick="loadDemoGame('mario')">
-                        Load Demo
-                    </button>
-                    <button class="btn btn-primary" id="startBtn" onclick="startEmulation()">
-                        Start Game
-                    </button>
-                    <button class="btn" id="pauseBtn" onclick="togglePause()" disabled>
-                        Pause
-                    </button>
-                    <button class="btn" id="resetBtn" onclick="resetGame()">
-                        Reset
-                    </button>
-                </div>
-
-                <div class="instructions">
-                    <strong>Features:</strong> Fully functional demo games • Real NES-style graphics • Working controls • No external dependencies
-                </div>
-            </div>
-
-            <div class="info-panel">
-                <div class="panel-section">
-                    <div class="panel-title">Game Status</div>
-                    <div class="status-item">
-                        Game: <span class="status-value" id="gameStatus">No game loaded</span>
-                    </div>
-                    <div class="status-item">
-                        State: <span class="status-value" id="stateStatus">Ready</span>
-                    </div>
-                    <div class="status-item">
-                        Score: <span class="status-value" id="scoreValue">0</span>
-                    </div>
-                    <div class="status-item">
-                        Lives: <span class="status-value" id="livesValue">3</span>
-                    </div>
-                    <div class="status-item">
-                        FPS: <span class="status-value" id="fpsCounter">0</span>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <div class="panel-title">Current Game</div>
-                    <div id="gameInfoArea">
-                        <div class="rom-info">
-                            Select a demo game from the buttons above
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <div class="panel-title">How to Play</div>
-                    <div class="instructions">
-                        <strong>Super Mario:</strong> Run right, jump over enemies, hit blocks<br>
-                        <strong>Zelda:</strong> Explore, fight enemies, find treasure<br>
-                        <strong>Mega Man:</strong> Shoot enemies, avoid obstacles<br>
-                        <strong>Metroid:</strong> Explore, shoot doors, find powerups
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <div class="panel-title">Messages</div>
-                    <div id="messageArea">
-                        <div class="message info">Click "Play Super Mario Demo" to start!</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <canvas id="nesCanvas" width="256" height="240"></canvas>
+    <div class="controls">
+        <input type="file" id="romFile" accept=".nes" style="display: none;" onchange="loadROM(this.files[0])">
+        <button class="btn" onclick="document.getElementById('romFile').click()">Load ROM</button>
+        <button class="btn" id="startBtn" onclick="startEmulation()" disabled>Start</button>
+        <button class="btn" id="pauseBtn" onclick="togglePause()" disabled>Pause</button>
+        <button class="btn" id="resetBtn" onclick="resetNES()" disabled>Reset</button>
     </div>
+    <div class="status" id="status">No ROM loaded</div>
+    <div id="messageArea"></div>
 
     <script>
-        // Self-contained NES emulator with working demo games
+        let nes = null;
         let emulationRunning = false;
         let animationFrameId = null;
-        let frameCount = 0;
-        let lastFpsTime = 0;
-        let currentFps = 0;
-        let currentGame = null;
-        let gameState = {
-            score: 0,
-            lives: 3,
-            level: 1,
-            playerX: 50,
-            playerY: 180,
-            playerVelocityY: 0,
-            jumping: false,
-            enemies: [],
-            items: [],
-            background: []
-        };
 
-        // DOM elements
         const canvas = document.getElementById('nesCanvas');
         const ctx = canvas.getContext('2d');
-        const screenOverlay = document.getElementById('screenOverlay');
+        const status = document.getElementById('status');
+        const messageArea = document.getElementById('messageArea');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
 
-        // Key mapping
-        const KEYMAP = {
-            ArrowUp: 'UP',
-            ArrowDown: 'DOWN',
-            ArrowLeft: 'LEFT',
-            ArrowRight: 'RIGHT',
-            KeyZ: 'A',
-            KeyX: 'B',
-            Enter: 'START',
-            ShiftLeft: 'SELECT',
-            ShiftRight: 'SELECT'
-        };
-
-        // Active keys
-        const activeKeys = new Set();
-
-        // Game definitions
-        const DEMO_GAMES = {
-            mario: {
-                name: "Super Mario Bros Demo",
-                description: "Run and jump platformer",
-                color: '#E52521',
-                groundColor: '#8B4513',
-                skyColor: '#6B8CFF',
-                playerColor: '#E52521',
-                enemyColor: '#00AA00'
-            },
-            zelda: {
-                name: "Zelda Demo",
-                description: "Action adventure game",
-                color: '#FFD700',
-                groundColor: '#228B22',
-                skyColor: '#87CEEB',
-                playerColor: '#FFD700',
-                enemyColor: '#8B0000'
-            },
-            megaman: {
-                name: "Mega Man Demo",
-                description: "Run and shoot platformer",
-                color: '#4169E1',
-                groundColor: '#696969',
-                skyColor: '#000080',
-                playerColor: '#4169E1',
-                enemyColor: '#FF4500'
-            },
-            metroid: {
-                name: "Metroid Demo",
-                description: "Exploration adventure",
-                color: '#32CD32',
-                groundColor: '#2F4F4F',
-                skyColor: '#000000',
-                playerColor: '#32CD32',
-                enemyColor: '#FF69B4'
-            }
-        };
-
-        // Initialize the emulator
-        function initEmulator() {
-            // Draw initial black screen
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            showMessage('Self-contained emulator ready!', 'success');
-            setupKeyboard();
-            return true;
-        }
-
-        // Load a demo game
-        function loadDemoGame(gameType) {
-            if (!DEMO_GAMES[gameType]) {
-                showMessage('Unknown game type', 'error');
-                return;
-            }
-
-            currentGame = gameType;
-            resetGameState();
-            
-            document.getElementById('gameStatus').textContent = DEMO_GAMES[gameType].name;
-            document.getElementById('gameInfoArea').innerHTML = `
-                <div class="rom-info">
-                    <div><strong>Game:</strong> ${DEMO_GAMES[gameType].name}</div>
-                    <div><strong>Type:</strong> ${DEMO_GAMES[gameType].description}</div>
-                    <div><strong>Status:</strong> Ready to play</div>
-                </div>
-            `;
-            
-            showMessage(`Loaded ${DEMO_GAMES[gameType].name} demo`, 'success');
-            document.getElementById('startBtn').disabled = false;
-            
-            // Update demo buttons
-            document.querySelectorAll('.demo-game-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-        }
-
-        // Reset game state
-        function resetGameState() {
-            gameState = {
-                score: 0,
-                lives: 3,
-                level: 1,
-                playerX: 50,
-                playerY: 180,
-                playerVelocityY: 0,
-                jumping: false,
-                enemies: [],
-                items: [],
-                background: [],
-                gameTime: 0
-            };
-            
-            // Create initial enemies and items based on game type
-            initializeGameWorld();
-            
-            updateUI();
-        }
-
-        // Initialize game world
-        function initializeGameWorld() {
-            gameState.enemies = [];
-            gameState.items = [];
-            gameState.background = [];
-            
-            // Create platforms and enemies based on game type
-            for (let i = 0; i < 5; i++) {
-                gameState.enemies.push({
-                    x: 100 + i * 80,
-                    y: 170,
-                    type: 'goomba',
-                    direction: i % 2 === 0 ? 1 : -1,
-                    speed: 1
-                });
-            }
-            
-            // Create some collectible items
-            for (let i = 0; i < 3; i++) {
-                gameState.items.push({
-                    x: 200 + i * 60,
-                    y: 120,
-                    type: 'coin',
-                    collected: false
-                });
-            }
-            
-            // Create background elements
-            for (let i = 0; i < 10; i++) {
-                gameState.background.push({
-                    x: i * 50,
-                    y: Math.random() * 50 + 20,
-                    type: 'cloud'
-                });
-            }
-        }
-
-        // Start emulation
-        function startEmulation() {
-            if (!currentGame) {
-                showMessage('No game loaded', 'error');
-                return;
-            }
-            
-            if (emulationRunning) return;
-            
-            emulationRunning = true;
-            screenOverlay.style.display = 'none';
-            document.getElementById('stateStatus').textContent = 'Playing';
-            document.getElementById('pauseBtn').disabled = false;
-            
-            showMessage('Game started! Use arrow keys to move and Z/X for actions', 'success');
-            
-            lastFpsTime = performance.now();
-            frameCount = 0;
-            animationFrameId = requestAnimationFrame(gameLoop);
-        }
-
-        // Main game loop
-        function gameLoop(timestamp) {
-            if (!emulationRunning) return;
-            
-            try {
-                // Update game state
-                updateGame();
-                
-                // Draw everything
-                drawGame();
-                
-                // Update counters
-                frameCount++;
-                updateFPS(timestamp);
-                
-                // Continue loop
-                animationFrameId = requestAnimationFrame(gameLoop);
-                
-            } catch (error) {
-                console.error('Game error:', error);
-                showMessage('Game error: ' + error.message, 'error');
-                stopEmulation();
-            }
-        }
-
-        // Update game state
-        function updateGame() {
-            if (!currentGame) return;
-            
-            gameState.gameTime++;
-            
-            // Handle player movement
-            handlePlayerMovement();
-            
-            // Update enemies
-            updateEnemies();
-            
-            // Check collisions
-            checkCollisions();
-            
-            // Update UI
-            updateUI();
-        }
-
-        // Handle player movement based on active keys
-        function handlePlayerMovement() {
-            // Horizontal movement
-            if (activeKeys.has('LEFT')) {
-                gameState.playerX = Math.max(20, gameState.playerX - 3);
-            }
-            if (activeKeys.has('RIGHT')) {
-                gameState.playerX = Math.min(220, gameState.playerX + 3);
-            }
-            
-            // Jumping
-            if (activeKeys.has('A') && !gameState.jumping) {
-                gameState.jumping = true;
-                gameState.playerVelocityY = -8;
-            }
-            
-            // Apply gravity
-            if (gameState.jumping) {
-                gameState.playerY += gameState.playerVelocityY;
-                gameState.playerVelocityY += 0.5;
-                
-                // Land on ground
-                if (gameState.playerY >= 180) {
-                    gameState.playerY = 180;
-                    gameState.jumping = false;
-                    gameState.playerVelocityY = 0;
-                }
-            }
-            
-            // B button action (game specific)
-            if (activeKeys.has('B')) {
-                // Different actions for different games
-                if (currentGame === 'megaman') {
-                    // Shooting logic would go here
-                }
-            }
-        }
-
-        // Update enemies
-        function updateEnemies() {
-            gameState.enemies.forEach(enemy => {
-                enemy.x += enemy.direction * enemy.speed;
-                
-                // Bounce at screen edges
-                if (enemy.x <= 20 || enemy.x >= 230) {
-                    enemy.direction *= -1;
-                }
-            });
-        }
-
-        // Check collisions
-        function checkCollisions() {
-            // Check item collisions
-            gameState.items.forEach((item, index) => {
-                if (!item.collected && 
-                    Math.abs(gameState.playerX - item.x) < 15 && 
-                    Math.abs(gameState.playerY - item.y) < 15) {
-                    item.collected = true;
-                    gameState.score += 100;
-                    showMessage('+100 points!', 'success');
-                }
-            });
-            
-            // Check enemy collisions
-            gameState.enemies.forEach(enemy => {
-                if (Math.abs(gameState.playerX - enemy.x) < 20 && 
-                    Math.abs(gameState.playerY - enemy.y) < 20) {
-                    // Player hit enemy
-                    gameState.lives--;
-                    showMessage('Ouch! Lost a life', 'warning');
-                    gameState.playerX = 50;
-                    gameState.playerY = 180;
-                    
-                    if (gameState.lives <= 0) {
-                        gameOver();
-                    }
-                }
-            });
-        }
-
-        // Draw the game
-        function drawGame() {
-            const game = DEMO_GAMES[currentGame];
-            if (!game) return;
-            
-            // Clear screen with sky color
-            ctx.fillStyle = game.skyColor;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw background elements
-            drawBackground();
-            
-            // Draw ground
-            ctx.fillStyle = game.groundColor;
-            ctx.fillRect(0, 190, canvas.width, 50);
-            
-            // Draw platforms
-            ctx.fillStyle = '#8B4513';
-            for (let i = 0; i < 4; i++) {
-                ctx.fillRect(50 + i * 60, 150, 40, 10);
-            }
-            
-            // Draw items
-            drawItems();
-            
-            // Draw enemies
-            drawEnemies();
-            
-            // Draw player
-            drawPlayer();
-            
-            // Draw HUD
-            drawHUD();
-        }
-
-        // Draw background elements
-        function drawBackground() {
-            const game = DEMO_GAMES[currentGame];
-            gameState.background.forEach(bg => {
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(bg.x, bg.y, 30, 15);
-                ctx.fillRect(bg.x + 10, bg.y - 10, 20, 10);
-            });
-        }
-
-        // Draw items
-        function drawItems() {
-            const game = DEMO_GAMES[currentGame];
-            gameState.items.forEach(item => {
-                if (!item.collected) {
-                    if (item.type === 'coin') {
-                        ctx.fillStyle = '#FFD700';
-                        ctx.beginPath();
-                        ctx.arc(item.x, item.y, 8, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            });
-        }
-
-        // Draw enemies
-        function drawEnemies() {
-            const game = DEMO_GAMES[currentGame];
-            gameState.enemies.forEach(enemy => {
-                ctx.fillStyle = game.enemyColor;
-                ctx.fillRect(enemy.x - 10, enemy.y - 10, 20, 20);
-                
-                // Enemy details
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(enemy.x - 5, enemy.y - 5, 3, 3);
-                ctx.fillRect(enemy.x + 2, enemy.y - 5, 3, 3);
-            });
-        }
-
-        // Draw player
-        function drawPlayer() {
-            const game = DEMO_GAMES[currentGame];
-            
-            // Player body
-            ctx.fillStyle = game.playerColor;
-            ctx.fillRect(gameState.playerX - 12, gameState.playerY - 20, 24, 20);
-            
-            // Player details
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(gameState.playerX - 8, gameState.playerY - 15, 4, 4);
-            ctx.fillRect(gameState.playerX + 4, gameState.playerY - 15, 4, 4);
-            
-            // Player hat (Mario-style)
-            if (currentGame === 'mario') {
-                ctx.fillStyle = '#E52521';
-                ctx.fillRect(gameState.playerX - 15, gameState.playerY - 25, 30, 8);
-            }
-        }
-
-        // Draw HUD
-        function drawHUD() {
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '10px Arial';
-            ctx.fillText(`SCORE: ${gameState.score}`, 10, 15);
-            ctx.fillText(`LIVES: ${gameState.lives}`, 100, 15);
-            ctx.fillText(`LEVEL: ${gameState.level}`, 180, 15);
-        }
-
-        // Game over
-        function gameOver() {
-            stopEmulation();
-            showMessage('Game Over! Final score: ' + gameState.score, 'error');
-            document.getElementById('stateStatus').textContent = 'Game Over';
-            
-            // Show game over screen
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
-            ctx.fillText(`FINAL SCORE: ${gameState.score}`, canvas.width / 2, canvas.height / 2 + 10);
-            ctx.fillText('Click Reset to play again', canvas.width / 2, canvas.height / 2 + 40);
-        }
-
-        // Toggle pause
-        function togglePause() {
-            emulationRunning = !emulationRunning;
-            
-            if (emulationRunning) {
-                animationFrameId = requestAnimationFrame(gameLoop);
-                document.getElementById('stateStatus').textContent = 'Playing';
-                document.getElementById('pauseBtn').textContent = 'Pause';
-                showMessage('Game resumed', 'info');
-            } else {
-                if (animationFrameId) cancelAnimationFrame(animationFrameId);
-                document.getElementById('stateStatus').textContent = 'Paused';
-                document.getElementById('pauseBtn').textContent = 'Resume';
-                showMessage('Game paused', 'info');
-            }
-        }
-
-        // Reset game
-        function resetGame() {
-            stopEmulation();
-            resetGameState();
-            document.getElementById('stateStatus').textContent = 'Ready';
-            showMessage('Game reset', 'info');
-            
-            // Clear screen
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            screenOverlay.style.display = 'flex';
-        }
-
-        // Stop emulation
-        function stopEmulation() {
-            emulationRunning = false;
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
-        }
-
-        // Update FPS counter
-        function updateFPS(timestamp) {
-            if (timestamp - lastFpsTime >= 1000) {
-                currentFps = Math.round((frameCount * 1000) / (timestamp - lastFpsTime));
-                frameCount = 0;
-                lastFpsTime = timestamp;
-                document.getElementById('fpsCounter').textContent = currentFps;
-            }
-        }
-
-        // Update UI
-        function updateUI() {
-            document.getElementById('scoreValue').textContent = gameState.score;
-            document.getElementById('livesValue').textContent = gameState.lives;
-        }
-
-        // Show message
         function showMessage(message, type = 'info') {
-            const messageArea = document.getElementById('messageArea');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
             messageDiv.textContent = message;
             messageArea.insertBefore(messageDiv, messageArea.firstChild);
-            
             while (messageArea.children.length > 5) {
                 messageArea.removeChild(messageArea.lastChild);
             }
         }
 
-        // Setup keyboard controls
-        function setupKeyboard() {
-            document.addEventListener('keydown', function(e) {
-                const action = KEYMAP[e.code];
-                if (action) {
-                    e.preventDefault();
-                    activeKeys.add(action);
-                }
-            });
-
-            document.addEventListener('keyup', function(e) {
-                const action = KEYMAP[e.code];
-                if (action) {
-                    e.preventDefault();
-                    activeKeys.delete(action);
-                }
-            });
+        function initCanvas() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 256, 240);
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Load a ROM to begin', 128, 120);
         }
+        initCanvas();
 
-        // Initialize when page loads
-        window.addEventListener('load', function() {
-            initEmulator();
-            showMessage('🎮 Self-contained NES emulator ready!', 'success');
-            showMessage('Click "Play Super Mario Demo" to start playing', 'info');
+        window.addEventListener('load', () => {
+            if (typeof JSNES === 'undefined') {
+                console.error('JSNES not loaded');
+                showMessage('Error: JSNES library not loaded. Check base64 string.', 'error');
+                return;
+            }
+            try {
+                nes = new JSNES({
+                    onFrame: (frameBuffer) => {
+                        const imageData = ctx.createImageData(256, 240);
+                        for (let i = 0; i < frameBuffer.length; i++) {
+                            imageData.data[i * 4 + 0] = (frameBuffer[i] >> 16) & 0xFF; // R
+                            imageData.data[i * 4 + 1] = (frameBuffer[i] >> 8) & 0xFF;  // G
+                            imageData.data[i * 4 + 2] = frameBuffer[i] & 0xFF;        // B
+                            imageData.data[i * 4 + 3] = 255;                          // A
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+                    },
+                    onStatusUpdate: (msg) => {
+                        status.textContent = msg;
+                        showMessage(msg, 'info');
+                    },
+                    emulateSound: false // Disable audio for Edge compatibility
+                });
+                showMessage('JSNES emulator initialized', 'success');
+            } catch (e) {
+                console.error('Error initializing JSNES:', e);
+                showMessage('Error initializing JSNES: ' + e.message, 'error');
+            }
         });
 
-        // Handle page visibility
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden && emulationRunning) {
-                togglePause();
+        window.loadROM = function(file) {
+            if (!file) {
+                alert('Please select a .nes file');
+                status.textContent = 'No ROM selected';
+                showMessage('No ROM selected', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const romData = new Uint8Array(e.target.result);
+                    nes.loadROM(romData);
+                    status.textContent = `Playing: ${file.name}`;
+                    showMessage(`ROM loaded: ${file.name}`, 'success');
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = false;
+                    resetBtn.disabled = false;
+                } catch (error) {
+                    console.error('Error loading ROM:', error);
+                    alert('Error loading ROM: ' + error.message);
+                    status.textContent = 'Error loading ROM';
+                    showMessage('Error loading ROM: ' + error.message, 'error');
+                    initCanvas();
+                }
+            };
+            reader.onerror = () => {
+                console.error('Error reading ROM file:', file.name);
+                alert('Error reading ROM file');
+                status.textContent = 'Error reading ROM';
+                showMessage('Error reading ROM file', 'error');
+                initCanvas();
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        function startEmulation() {
+            if (!nes || !nes.rom) {
+                showMessage('No ROM loaded', 'error');
+                return;
+            }
+            if (emulationRunning) return;
+            emulationRunning = true;
+            pauseBtn.textContent = 'Pause';
+            animationFrameId = requestAnimationFrame(emulationLoop);
+            showMessage('Emulation started', 'success');
+        }
+
+        function emulationLoop() {
+            if (!emulationRunning) return;
+            nes.frame();
+            animationFrameId = requestAnimationFrame(emulationLoop);
+        }
+
+        function togglePause() {
+            if (!nes) return;
+            emulationRunning = !emulationRunning;
+            pauseBtn.textContent = emulationRunning ? 'Pause' : 'Resume';
+            if (emulationRunning) {
+                animationFrameId = requestAnimationFrame(emulationLoop);
+                showMessage('Emulation resumed', 'success');
+            } else {
+                cancelAnimationFrame(animationFrameId);
+                showMessage('Emulation paused', 'info');
+            }
+        }
+
+        function resetNES() {
+            if (nes) {
+                nes.reset();
+                showMessage('NES reset', 'info');
+            }
+        }
+
+        const controls = {
+            'ArrowUp': JSNES.Controller.BUTTON_UP,
+            'ArrowDown': JSNES.Controller.BUTTON_DOWN,
+            'ArrowLeft': JSNES.Controller.BUTTON_LEFT,
+            'ArrowRight': JSNES.Controller.BUTTON_RIGHT,
+            'z': JSNES.Controller.BUTTON_A,
+            'x': JSNES.Controller.BUTTON_B,
+            'Enter': JSNES.Controller.BUTTON_START,
+            'Shift': JSNES.Controller.BUTTON_SELECT
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (nes && controls[e.key]) {
+                nes.buttonDown(1, controls[e.key]);
+                showMessage(`Button pressed: ${e.key}`, 'info');
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (nes && controls[e.key]) {
+                nes.buttonUp(1, controls[e.key]);
+                showMessage(`Button released: ${e.key}`, 'info');
+                e.preventDefault();
             }
         });
     </script>
