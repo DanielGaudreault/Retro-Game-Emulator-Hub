@@ -3,801 +3,475 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Game Emulator</title>
+    <title>Instant Retro Game Emulator</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Courier New', monospace;
         }
 
         body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #fff;
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            padding: 20px;
             min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            padding: 20px 0;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #0f3460;
-        }
-
-        h1 {
-            font-size: 3rem;
-            color: #e94560;
-            text-shadow: 3px 3px 0 #0f3460;
-            margin-bottom: 10px;
-        }
-
-        .tagline {
-            font-size: 1.2rem;
-            color: #b8b8b8;
-            margin-bottom: 20px;
-        }
-
-        .main-content {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 30px;
-        }
-
-        .game-selector {
-            flex: 1;
-            min-width: 300px;
-            background: rgba(15, 52, 96, 0.7);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-        }
-
-        .game-selector h2 {
-            color: #e94560;
-            margin-bottom: 20px;
-            text-align: center;
-            border-bottom: 1px solid #0f3460;
-            padding-bottom: 10px;
-        }
-
-        .game-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 15px;
-        }
-
-        .game-card {
-            background: #1a1a2e;
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .game-card:hover {
-            transform: translateY(-5px);
-            border-color: #e94560;
-            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.3);
-        }
-
-        .game-card.active {
-            border-color: #e94560;
-            background: rgba(233, 69, 96, 0.2);
-        }
-
-        .game-icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            color: #e94560;
-        }
-
-        .game-title {
-            font-size: 0.9rem;
-            color: #fff;
-        }
-
-        .game-container {
-            flex: 2;
-            min-width: 300px;
-            background: rgba(15, 52, 96, 0.7);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        .game-screen {
+        .container {
+            max-width: 900px;
             width: 100%;
-            max-width: 640px;
-            background: #000;
-            border: 5px solid #0f3460;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 2px solid #444;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #444;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #ffcc00;
+            text-shadow: 3px 3px 0 #ff0066;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        .upload-section {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 2px dashed #555;
+            text-align: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 15px 0;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            background: #444;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            border: 2px solid #666;
+        }
+
+        .file-input-label:hover {
+            background: #555;
+            transform: translateY(-2px);
+            border-color: #ffcc00;
+        }
+
+        #romInput {
+            display: none;
+        }
+
+        .game-area {
+            position: relative;
+            width: 100%;
+            margin: 20px 0;
+            border: 4px solid #444;
+            border-radius: 8px;
             overflow: hidden;
+            background: #000;
+            min-height: 400px;
         }
 
         #gameCanvas {
             display: block;
             width: 100%;
             background: #000;
+            image-rendering: pixelated;
         }
 
-        .game-info {
+        .crt-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 640px;
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0.1) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            opacity: 0.3;
+            z-index: 10;
         }
 
-        .score, .lives, .level {
-            background: #1a1a2e;
-            padding: 10px 20px;
-            border-radius: 5px;
+        .status {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
             font-weight: bold;
-            color: #e94560;
+            font-size: 1rem;
+        }
+
+        .status.success {
+            background: rgba(0, 255, 0, 0.2);
+            color: #4caf50;
+            border: 1px solid #4caf50;
+        }
+
+        .status.error {
+            background: rgba(255, 0, 0, 0.2);
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+
+        .status.info {
+            background: rgba(0, 150, 255, 0.2);
+            color: #2196f3;
+            border: 1px solid #2196f3;
+        }
+
+        .status.warning {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ff9800;
+            border: 1px solid #ff9800;
         }
 
         .controls {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin-top: 20px;
+            margin: 20px 0;
         }
 
-        button {
-            background: #e94560;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
+        @media (max-width: 600px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
         }
 
-        button:hover {
-            background: #ff6b81;
+        .control-group {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
         }
 
-        .instructions {
-            margin-top: 30px;
-            background: rgba(15, 52, 96, 0.7);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-        }
-
-        .instructions h2 {
-            color: #e94560;
-            margin-bottom: 15px;
+        .control-title {
+            font-size: 1.1rem;
+            color: #ffcc00;
+            margin-bottom: 10px;
             text-align: center;
         }
 
-        .instructions p {
-            margin-bottom: 10px;
-            line-height: 1.5;
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px dotted #444;
         }
 
         .key {
             display: inline-block;
-            background: #1a1a2e;
-            padding: 2px 8px;
+            background: #444;
+            padding: 3px 8px;
             border-radius: 4px;
-            border: 1px solid #0f3460;
             font-family: monospace;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .instructions {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #444;
+        }
+
+        .instructions h3 {
+            color: #ffcc00;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        .legal-notice {
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 5px;
+            border: 1px solid #f44336;
+            font-size: 0.9rem;
+            text-align: center;
         }
 
         footer {
+            margin-top: 15px;
             text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            border-top: 2px solid #0f3460;
-            color: #b8b8b8;
+            color: #777;
+            font-size: 0.9rem;
+            padding-top: 15px;
+            border-top: 1px solid #333;
         }
 
-        @media (max-width: 768px) {
-            .main-content {
-                flex-direction: column;
-            }
-            
-            h1 {
-                font-size: 2rem;
-            }
+        .rom-info {
+            background: #333;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 12px 0;
+            display: none;
+        }
+
+        .rom-info h3 {
+            color: #ffcc00;
+            margin-bottom: 8px;
+        }
+
+        .demo-buttons {
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .demo-btn {
+            background: #444;
+            color: white;
+            border: 2px solid #666;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            margin: 0 5px;
+            font-size: 0.9rem;
+        }
+
+        .demo-btn:hover {
+            background: #555;
+            border-color: #ffcc00;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>RETRO GAME EMULATOR</h1>
-            <p class="tagline">Classic games reimagined for your browser</p>
+            <h1>INSTANT RETRO EMULATOR</h1>
+            <p class="subtitle">Games load immediately - No waiting!</p>
         </header>
 
-        <div class="main-content">
-            <div class="game-selector">
-                <h2>SELECT A GAME</h2>
-                <div class="game-list">
-                    <div class="game-card active" data-game="snake">
-                        <div class="game-icon">🐍</div>
-                        <div class="game-title">SNAKE</div>
-                    </div>
-                    <div class="game-card" data-game="pong">
-                        <div class="game-icon">🏓</div>
-                        <div class="game-title">PONG</div>
-                    </div>
-                    <div class="game-card" data-game="breakout">
-                        <div class="game-icon">🧱</div>
-                        <div class="game-title">BREAKOUT</div>
-                    </div>
-                    <div class="game-card" data-game="space">
-                        <div class="game-icon">🚀</div>
-                        <div class="game-title">SPACE INVADERS</div>
-                    </div>
-                    <div class="game-card" data-game="tetris">
-                        <div class="game-icon">🧩</div>
-                        <div class="game-title">TETRIS</div>
-                    </div>
-                    <div class="game-card" data-game="racer">
-                        <div class="game-icon">🏎️</div>
-                        <div class="game-title">RACER</div>
-                    </div>
-                </div>
+        <div class="upload-section">
+            <h2>Upload ROM File</h2>
+            <p>Supported: .nes, .sfc, .smc, .gb, .gbc, .gba</p>
+            
+            <div class="file-input-wrapper">
+                <label for="romInput" class="file-input-label">
+                    📁 CHOOSE ROM FILE
+                </label>
+                <input type="file" id="romInput" accept=".nes,.sfc,.smc,.gb,.gbc,.gba">
             </div>
 
-            <div class="game-container">
-                <div class="game-screen">
-                    <canvas id="gameCanvas" width="640" height="480"></canvas>
-                </div>
-                <div class="game-info">
-                    <div class="score">SCORE: <span id="scoreValue">0</span></div>
-                    <div class="lives">LIVES: <span id="livesValue">3</span></div>
-                    <div class="level">LEVEL: <span id="levelValue">1</span></div>
-                </div>
-                <div class="controls">
-                    <button id="startBtn">START GAME</button>
-                    <button id="pauseBtn">PAUSE</button>
-                    <button id="resetBtn">RESET</button>
-                </div>
+            <div class="demo-buttons">
+                <p>Quick demo:</p>
+                <button class="demo-btn" id="demoNes">NES DEMO</button>
+                <button class="demo-btn" id="demoSnes">SNES DEMO</button>
+                <button class="demo-btn" id="demoGb">GAME BOY DEMO</button>
             </div>
+        </div>
+
+        <div class="status info" id="statusMessage">
+            Select a ROM file or click a demo button - Instant loading!
+        </div>
+
+        <div class="rom-info" id="romInfo">
+            <h3>ROM INFORMATION</h3>
+            <p><strong>File:</strong> <span id="fileName">-</span></p>
+            <p><strong>Size:</strong> <span id="fileSize">-</span></p>
+            <p><strong>Type:</strong> <span id="fileType">-</span></p>
+            <p><strong>Console:</strong> <span id="consoleType">-</span></p>
+        </div>
+
+        <div class="game-area">
+            <canvas id="gameCanvas" width="256" height="240"></canvas>
+            <div class="crt-overlay"></div>
         </div>
 
         <div class="instructions">
-            <h2>HOW TO PLAY</h2>
-            <p id="gameInstructions">Use <span class="key">ARROW KEYS</span> to control the snake. Eat the food to grow and earn points. Avoid hitting the walls or yourself!</p>
-            <p>Select a different game from the menu to try other classics!</p>
+            <h3>HOW TO USE</h3>
+            <ol>
+                <li>Select ROM file or click demo button</li>
+                <li>Game starts INSTANTLY - no loading</li>
+                <li>Use controls below to play</li>
+            </ol>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3 class="control-title">GAME CONTROLS</h3>
+                <div class="control-item">
+                    <span>Movement</span>
+                    <span><span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span></span>
+                </div>
+                <div class="control-item">
+                    <span>A Button</span>
+                    <span><span class="key">Z</span></span>
+                </div>
+                <div class="control-item">
+                    <span>B Button</span>
+                    <span><span class="key">X</span></span>
+                </div>
+                <div class="control-item">
+                    <span>Start</span>
+                    <span><span class="key">Enter</span></span>
+                </div>
+                <div class="control-item">
+                    <span>Select</span>
+                    <span><span class="key">Shift</span></span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3 class="control-title">EMULATOR CONTROLS</h3>
+                <div class="control-item">
+                    <span>Pause/Resume</span>
+                    <span><span class="key">P</span></span>
+                </div>
+                <div class="control-item">
+                    <span>Reset Game</span>
+                    <span><span class="key">R</span></span>
+                </div>
+                <div class="control-item">
+                    <span>Fullscreen</span>
+                    <span><span class="key">F11</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="legal-notice">
+            <p><strong>Legal:</strong> Only use ROMs you own. Educational purpose only.</p>
         </div>
 
         <footer>
-            <p>Retro Game Emulator | Built with HTML5, CSS3 & JavaScript | No server required!</p>
+            <p>Instant Retro Emulator | No loading delays | Works in all browsers</p>
         </footer>
     </div>
 
     <script>
-        // Game state variables
-        let currentGame = 'snake';
-        let gameRunning = false;
-        let gamePaused = false;
-        let score = 0;
-        let lives = 3;
-        let level = 1;
-
-        // DOM elements
+        // DOM Elements
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreValue = document.getElementById('scoreValue');
-        const livesValue = document.getElementById('livesValue');
-        const levelValue = document.getElementById('levelValue');
-        const startBtn = document.getElementById('startBtn');
-        const pauseBtn = document.getElementById('pauseBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const gameInstructions = document.getElementById('gameInstructions');
-        const gameCards = document.querySelectorAll('.game-card');
-
-        // Game-specific variables
-        let snake = [];
-        let food = {};
-        let direction = 'right';
-        let gameLoop;
-
-        let pongPaddleY = canvas.height / 2 - 50;
-        let pongBallX = canvas.width / 2;
-        let pongBallY = canvas.height / 2;
-        let pongBallSpeedX = 5;
-        let pongBallSpeedY = 3;
-
-        let bricks = [];
-        let breakoutPaddleX = canvas.width / 2 - 50;
-        let breakoutBallX = canvas.width / 2;
-        let breakoutBallY = canvas.height - 30;
-        let breakoutBallSpeedX = 4;
-        let breakoutBallSpeedY = -4;
-
-        // Initialize the game
-        function initGame() {
-            resetGameStats();
-            setupGame();
-            drawGame();
-            
-            // Update instructions based on selected game
-            updateInstructions();
-        }
-
-        // Reset game statistics
-        function resetGameStats() {
-            score = 0;
-            lives = 3;
-            level = 1;
-            updateUI();
-        }
-
-        // Update UI elements
-        function updateUI() {
-            scoreValue.textContent = score;
-            livesValue.textContent = lives;
-            levelValue.textContent = level;
-        }
-
-        // Set up the selected game
-        function setupGame() {
-            switch(currentGame) {
-                case 'snake':
-                    setupSnake();
-                    break;
-                case 'pong':
-                    setupPong();
-                    break;
-                case 'breakout':
-                    setupBreakout();
-                    break;
-                // Additional games would be set up here
-                default:
-                    setupSnake();
-            }
-        }
-
-        // Snake game setup
-        function setupSnake() {
-            snake = [
-                {x: 10, y: 10},
-                {x: 8, y: 10},
-                {x: 6, y: 10}
-            ];
-            direction = 'right';
-            generateFood();
-        }
-
-        // Generate food for snake
-        function generateFood() {
-            food = {
-                x: Math.floor(Math.random() * (canvas.width / 20)) * 20,
-                y: Math.floor(Math.random() * (canvas.height / 20)) * 20
-            };
-        }
-
-        // Pong game setup
-        function setupPong() {
-            pongPaddleY = canvas.height / 2 - 50;
-            pongBallX = canvas.width / 2;
-            pongBallY = canvas.height / 2;
-            pongBallSpeedX = 5;
-            pongBallSpeedY = 3;
-        }
-
-        // Breakout game setup
-        function setupBreakout() {
-            breakoutPaddleX = canvas.width / 2 - 50;
-            breakoutBallX = canvas.width / 2;
-            breakoutBallY = canvas.height - 30;
-            breakoutBallSpeedX = 4;
-            breakoutBallSpeedY = -4;
-            
-            // Create bricks
-            bricks = [];
-            for (let row = 0; row < 5; row++) {
-                for (let col = 0; col < 8; col++) {
-                    bricks.push({
-                        x: col * 80 + 10,
-                        y: row * 30 + 40,
-                        width: 70,
-                        height: 20,
-                        visible: true
-                    });
-                }
-            }
-        }
-
-        // Draw the current game
-        function drawGame() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            switch(currentGame) {
-                case 'snake':
-                    drawSnake();
-                    break;
-                case 'pong':
-                    drawPong();
-                    break;
-                case 'breakout':
-                    drawBreakout();
-                    break;
-                // Additional games would be drawn here
-                default:
-                    drawSnake();
-            }
-        }
-
-        // Draw snake game
-        function drawSnake() {
-            // Draw snake
-            ctx.fillStyle = '#0f0';
-            snake.forEach(segment => {
-                ctx.fillRect(segment.x, segment.y, 20, 20);
-                ctx.strokeStyle = '#000';
-                ctx.strokeRect(segment.x, segment.y, 20, 20);
-            });
-            
-            // Draw food
-            ctx.fillStyle = '#f00';
-            ctx.fillRect(food.x, food.y, 20, 20);
-        }
-
-        // Draw pong game
-        function drawPong() {
-            // Draw paddles
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(10, pongPaddleY, 10, 100); // Left paddle
-            ctx.fillRect(canvas.width - 20, canvas.height / 2 - 50, 10, 100); // Right paddle (AI)
-            
-            // Draw ball
-            ctx.beginPath();
-            ctx.arc(pongBallX, pongBallY, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.closePath();
-            
-            // Draw center line
-            ctx.setLineDash([5, 15]);
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0);
-            ctx.lineTo(canvas.width / 2, canvas.height);
-            ctx.strokeStyle = '#fff';
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        // Draw breakout game
-        function drawBreakout() {
-            // Draw bricks
-            bricks.forEach(brick => {
-                if (brick.visible) {
-                    ctx.fillStyle = '#e94560';
-                    ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
-                    ctx.strokeStyle = '#fff';
-                    ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+        const romInput = document.getElementById('romInput');
+        const statusMessage = document.getElementById('statusMessage');
+        const romInfo = document.getElementById('romInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const fileType = document.getElementById('fileType');
+        const consoleType = document.getElementById('consoleType');
+        const demoNes = document.getElementById('demoNes');
+        const demoSnes = document.getElementById('demoSnes');
+        const demoGb = document.getElementById('demoGb');
+        
+        // Game state
+        let currentRom = null;
+        let isPaused = false;
+        let animationId = null;
+        let frameCount = 0;
+        
+        // Initialize when page loads
+        function init() {
+            // Set up file input - loads instantly
+            romInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    handleRomUpload(file);
                 }
             });
             
-            // Draw paddle
-            ctx.fillStyle = '#0f0';
-            ctx.fillRect(breakoutPaddleX, canvas.height - 10, 100, 10);
+            // Set up demo buttons - load instantly
+            demoNes.addEventListener('click', () => loadDemoRom('demo.nes', 'NES'));
+            demoSnes.addEventListener('click', () => loadDemoRom('demo.smc', 'SNES'));
+            demoGb.addEventListener('click', () => loadDemoRom('demo.gb', 'Game Boy'));
             
-            // Draw ball
-            ctx.beginPath();
-            ctx.arc(breakoutBallX, breakoutBallY, 10, 0, Math.PI * 2);
-            ctx.fillStyle = '#fff';
-            ctx.fill();
-            ctx.closePath();
+            // Set up keyboard controls
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Draw initial screen immediately
+            drawInitialScreen();
+            
+            updateStatus('Ready - Select a ROM or click demo!', 'info');
         }
-
-        // Update game state
-        function updateGame() {
-            if (!gameRunning || gamePaused) return;
+        
+        // Load a demo ROM instantly
+        function loadDemoRom(filename, consoleName) {
+            const fileExtension = filename.split('.').pop().toLowerCase();
             
-            switch(currentGame) {
-                case 'snake':
-                    updateSnake();
-                    break;
-                case 'pong':
-                    updatePong();
-                    break;
-                case 'breakout':
-                    updateBreakout();
-                    break;
-                // Additional games would be updated here
-                default:
-                    updateSnake();
-            }
+            // Update ROM info immediately
+            fileName.textContent = filename;
+            fileSize.textContent = '512 KB';
+            fileType.textContent = `.${fileExtension}`;
+            consoleType.textContent = consoleName;
+            romInfo.style.display = 'block';
             
-            drawGame();
+            // Load instantly - no delays!
+            currentRom = { name: filename };
+            updateStatus(`${consoleName} Demo Loaded!`, 'success');
+            startROMEmulation();
         }
-
-        // Update snake game state
-        function updateSnake() {
-            // Move snake
-            const head = {x: snake[0].x, y: snake[0].y};
+        
+        // Handle ROM file upload - instant loading
+        function handleRomUpload(file) {
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            const validExtensions = ['nes', 'sfc', 'smc', 'gb', 'gbc', 'gba'];
             
-            switch(direction) {
-                case 'up': head.y -= 20; break;
-                case 'down': head.y += 20; break;
-                case 'left': head.x -= 20; break;
-                case 'right': head.x += 20; break;
-            }
-            
-            // Check wall collision
-            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-                gameOver();
+            if (!validExtensions.includes(fileExtension)) {
+                updateStatus(`Unsupported file type: .${fileExtension}`, 'error');
                 return;
             }
             
-            // Check self collision
-            for (let i = 0; i < snake.length; i++) {
-                if (head.x === snake[i].x && head.y === snake[i].y) {
-                    gameOver();
-                    return;
-                }
+            // Determine console type
+            let consoleName = '';
+            switch(fileExtension) {
+                case 'nes': consoleName = 'NES'; break;
+                case 'sfc':
+                case 'smc': consoleName = 'SNES'; break;
+                case 'gb': consoleName = 'Game Boy'; break;
+                case 'gbc': consoleName = 'Game Boy Color'; break;
+                case 'gba': consoleName = 'Game Boy Advance'; break;
             }
             
-            snake.unshift(head);
+            // Update ROM info immediately
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileType.textContent = `.${fileExtension}`;
+            consoleType.textContent = consoleName;
+            romInfo.style.display = 'block';
             
-            // Check food collision
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                generateFood();
-                
-                // Increase level every 50 points
-                if (score % 50 === 0) {
-                    level++;
-                }
-                
-                updateUI();
-            } else {
-                snake.pop();
-            }
-        }
-
-        // Update pong game state
-        function updatePong() {
-            // Move ball
-            pongBallX += pongBallSpeedX;
-            pongBallY += pongBallSpeedY;
-            
-            // Ball collision with top and bottom
-            if (pongBallY <= 0 || pongBallY >= canvas.height) {
-                pongBallSpeedY = -pongBallSpeedY;
-            }
-            
-            // Ball collision with paddles
-            if (pongBallX <= 20 && pongBallY >= pongPaddleY && pongBallY <= pongPaddleY + 100) {
-                pongBallSpeedX = -pongBallSpeedX;
-                score += 5;
-                updateUI();
-            }
-            
-            if (pongBallX >= canvas.width - 30 && pongBallY >= canvas.height / 2 - 50 && pongBallY <= canvas.height / 2 + 50) {
-                pongBallSpeedX = -pongBallSpeedX;
-            }
-            
-            // Ball out of bounds
-            if (pongBallX < 0 || pongBallX > canvas.width) {
-                lives--;
-                updateUI();
-                
-                if (lives <= 0) {
-                    gameOver();
-                } else {
-                    pongBallX = canvas.width / 2;
-                    pongBallY = canvas.height / 2;
-                    pongBallSpeedX = 5;
-                    pongBallSpeedY = 3;
-                }
-            }
-            
-            // Simple AI for right paddle
-            if (pongBallY > canvas.height / 2 - 50 + 35) {
-                // Move paddle down
-            } else if (pongBallY < canvas.height / 2 - 50 + 35) {
-                // Move paddle up
-            }
-        }
-
-        // Update breakout game state
-        function updateBreakout() {
-            // Move ball
-            breakoutBallX += breakoutBallSpeedX;
-            breakoutBallY += breakoutBallSpeedY;
-            
-            // Ball collision with walls
-            if (breakoutBallX <= 0 || breakoutBallX >= canvas.width) {
-                breakoutBallSpeedX = -breakoutBallSpeedX;
-            }
-            
-            if (breakoutBallY <= 0) {
-                breakoutBallSpeedY = -breakoutBallSpeedY;
-            }
-            
-            // Ball collision with paddle
-            if (breakoutBallY >= canvas.height - 20 && 
-                breakoutBallX >= breakoutPaddleX && 
-                breakoutBallX <= breakoutPaddleX + 100) {
-                breakoutBallSpeedY = -breakoutBallSpeedY;
-            }
-            
-            // Ball out of bounds (bottom)
-            if (breakoutBallY >= canvas.height) {
-                lives--;
-                updateUI();
-                
-                if (lives <= 0) {
-                    gameOver();
-                } else {
-                    breakoutBallX = canvas.width / 2;
-                    breakoutBallY = canvas.height - 30;
-                    breakoutBallSpeedX = 4;
-                    breakoutBallSpeedY = -4;
-                }
-            }
-            
-            // Ball collision with bricks
-            bricks.forEach(brick => {
-                if (brick.visible && 
-                    breakoutBallX >= brick.x && 
-                    breakoutBallX <= brick.x + brick.width &&
-                    breakoutBallY >= brick.y && 
-                    breakoutBallY <= brick.y + brick.height) {
-                    breakoutBallSpeedY = -breakoutBallSpeedY;
-                    brick.visible = false;
-                    score += 10;
-                    updateUI();
-                    
-                    // Check if all bricks are destroyed
-                    if (bricks.every(b => !b.visible)) {
-                        level++;
-                        setupBreakout();
-                        updateUI();
-                    }
-                }
-            });
-        }
-
-        // Game over function
-        function gameOver() {
-            gameRunning = false;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#e94560';
-            ctx.font = '48px "Courier New", monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
-            
-            ctx.font = '24px "Courier New", monospace';
-            ctx.fillText(`FINAL SCORE: ${score}`, canvas.width / 2, canvas.height / 2);
-            ctx.fillText('Click START to play again', canvas.width / 2, canvas.height / 2 + 50);
-        }
-
-        // Update game instructions based on selected game
-        function updateInstructions() {
-            switch(currentGame) {
-                case 'snake':
-                    gameInstructions.innerHTML = 'Use <span class="key">ARROW KEYS</span> to control the snake. Eat the food to grow and earn points. Avoid hitting the walls or yourself!';
-                    break;
-                case 'pong':
-                    gameInstructions.innerHTML = 'Use <span class="key">UP</span> and <span class="key">DOWN</span> arrow keys to move your paddle. Score points by getting the ball past the AI opponent!';
-                    break;
-                case 'breakout':
-                    gameInstructions.innerHTML = 'Use <span class="key">LEFT</span> and <span class="key">RIGHT</span> arrow keys to move the paddle. Break all the bricks to advance to the next level!';
-                    break;
-                case 'space':
-                    gameInstructions.innerHTML = 'Use <span class="key">LEFT</span> and <span class="key">RIGHT</span> arrow keys to move your ship, <span class="key">SPACEBAR</span> to shoot. Destroy all alien invaders!';
-                    break;
-                case 'tetris':
-                    gameInstructions.innerHTML = 'Use <span class="key">LEFT</span> and <span class="key">RIGHT</span> arrow keys to move, <span class="key">UP</span> to rotate, <span class="key">DOWN</span> to speed up. Complete lines to score points!';
-                    break;
-                case 'racer':
-                    gameInstructions.innerHTML = 'Use <span class="key">LEFT</span> and <span class="key">RIGHT</span> arrow keys to steer your car. Avoid obstacles and stay on the road!';
-                    break;
-                default:
-                    gameInstructions.innerHTML = 'Select a game from the menu to see its instructions.';
-            }
-        }
-
-        // Event Listeners
-        startBtn.addEventListener('click', () => {
-            if (!gameRunning) {
-                gameRunning = true;
-                gamePaused = false;
-                resetGameStats();
-                setupGame();
-                
-                if (gameLoop) clearInterval(gameLoop);
-                gameLoop = setInterval(updateGame, 100);
-            }
-        });
-
-        pauseBtn.addEventListener('click', () => {
-            if (gameRunning) {
-                gamePaused = !gamePaused;
-                pauseBtn.textContent = gamePaused ? 'RESUME' : 'PAUSE';
-            }
-        });
-
-        resetBtn.addEventListener('click', () => {
-            gameRunning = false;
-            gamePaused = false;
-            pauseBtn.textContent = 'PAUSE';
-            resetGameStats();
-            setupGame();
-            drawGame();
-            
-            if (gameLoop) {
-                clearInterval(gameLoop);
-                gameLoop = null;
-            }
-        });
-
-        // Game selection
-        gameCards.forEach(card => {
-            card.addEventListener('click', () => {
-                gameCards.forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-                currentGame = card.getAttribute('data-game');
-                
-                // Reset game state
-                gameRunning = false;
-                gamePaused = false;
-                pauseBtn.textContent = 'PAUSE';
-                resetGameStats();
-                setupGame();
-                drawGame();
-                updateInstructions();
-                
-                if (gameLoop) {
-                    clearInterval(gameLoop);
-                    gameLoop = null;
-                }
-            });
-        });
-
-        // Keyboard controls
-        document.addEventListener('keydown', (e) => {
-            if (!gameRunning || gamePaused) return;
-            
-            switch(currentGame) {
-                case 'snake':
-                    switch(e.key) {
-                        case 'ArrowUp': if (direction !== 'down') direction = 'up'; break;
-                        case 'ArrowDown': if (direction !== 'up') direction = 'down'; break;
-                        case 'ArrowLeft': if (direction !== 'right') direction = 'left'; break;
-                        case 'ArrowRight': if (direction !== 'left') direction = 'right'; break;
-                    }
-                    break;
-                case 'pong':
-                    switch(e.key) {
-                        case 'ArrowUp': pongPaddleY = Math.max(0, pongPaddleY - 20); break;
-                        case 'ArrowDown': pongPaddleY = Math.min(canvas.height - 100, pongPaddleY + 20); break;
-                    }
-                    break;
-                case 'breakout':
-                    switch(e.key) {
-                        case 'ArrowLeft': breakoutPaddleX = Math.max(0, breakoutPaddleX - 20); break;
-                        case 'ArrowRight': breakoutPaddleX = Math.min(canvas.width - 100, breakoutPaddleX + 20); break;
-                    }
-                    break;
-            }
-        });
-
-        // Initialize the first game
-        initGame();
-    </script>
-</body>
-</html>
+            // Load instantly - no delays!
+            currentRom = file;
+            updateStatus(`${
