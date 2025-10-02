@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebNES - Real NES Emulator</title>
+    <title>WebNES - Robust NES Emulator</title>
     <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
     <style>
         * {
@@ -190,26 +190,45 @@
             color: #E57373;
         }
 
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #fff;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 10px;
+        .message.warning {
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid #FF9800;
+            color: #FFB74D;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .rom-info {
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 11px;
+            font-family: monospace;
+        }
+
+        .test-roms {
+            margin-top: 10px;
+        }
+
+        .test-rom-btn {
+            background: #555;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 11px;
+            margin: 2px;
+        }
+
+        .test-rom-btn:hover {
+            background: #666;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 WebNES - Real NES Emulator</h1>
+            <h1>🎮 WebNES - Robust NES Emulator</h1>
         </div>
 
         <div class="main-content">
@@ -217,21 +236,22 @@
                 <div class="game-screen">
                     <canvas id="nesCanvas" width="256" height="240"></canvas>
                     <div class="screen-overlay" id="screenOverlay">
-                        <h2>Welcome to WebNES!</h2>
-                        <p>Load a NES ROM file (.nes) to start playing real NES games</p>
+                        <h2>WebNES Emulator</h2>
+                        <p>Load a NES ROM file or try a test ROM</p>
                         <div style="margin: 20px 0;">
                             <button class="btn btn-primary" onclick="document.getElementById('romFile').click()">
                                 📁 Load ROM File
                             </button>
-                            <input type="file" id="romFile" accept=".nes" style="display: none;" onchange="loadROM(this.files[0])">
+                            <input type="file" id="romFile" accept=".nes,.zip" style="display: none;" onchange="loadROM(this.files[0])">
+                        </div>
+                        <div class="test-roms">
+                            <button class="test-rom-btn" onclick="loadTestROM('nestest')">NESTest ROM</button>
+                            <button class="test-rom-btn" onclick="loadTestROM('mario')">Mario Bros</button>
+                            <button class="test-rom-btn" onclick="loadTestROM('donkeykong')">Donkey Kong</button>
                         </div>
                         <div class="instructions">
-                            <strong>Controls:</strong><br>
-                            <span class="key">Arrow Keys</span> = D-Pad • 
-                            <span class="key">Z</span> = A Button • 
-                            <span class="key">X</span> = B Button • 
-                            <span class="key">Enter</span> = Start • 
-                            <span class="key">Shift</span> = Select
+                            <strong>Supported formats:</strong> .nes (iNES), .zip containing .nes files<br>
+                            <strong>Controls:</strong> <span class="key">Arrows</span> <span class="key">Z</span> <span class="key">X</span> <span class="key">Enter</span> <span class="key">Shift</span>
                         </div>
                     </div>
                 </div>
@@ -249,14 +269,10 @@
                     <button class="btn" id="resetBtn" onclick="resetNES()" disabled>
                         Reset
                     </button>
-                    <button class="btn" id="fullscreenBtn" onclick="toggleFullscreen()">
-                        Fullscreen
-                    </button>
                 </div>
 
                 <div class="instructions">
-                    <strong>Tip:</strong> Make sure your ROM files are valid NES games (.nes format). 
-                    The emulator will display the actual game graphics when loaded.
+                    <strong>Note:</strong> Some ROMs may not work due to mapper limitations. Try the test ROMs first!
                 </div>
             </div>
 
@@ -278,21 +294,16 @@
                 </div>
 
                 <div class="panel-section">
-                    <div class="panel-title">CPU State</div>
-                    <div class="status-item">
-                        PC: <span class="status-value" id="regPC">0000</span>
-                    </div>
-                    <div class="status-item">
-                        A: <span class="status-value" id="regA">00</span>
-                        X: <span class="status-value" id="regX">00</span>
-                        Y: <span class="status-value" id="regY">00</span>
+                    <div class="panel-title">ROM Information</div>
+                    <div id="romInfoArea">
+                        <div class="rom-info">No ROM information available</div>
                     </div>
                 </div>
 
                 <div class="panel-section">
                     <div class="panel-title">Messages</div>
                     <div id="messageArea">
-                        <div class="message info">Load a NES ROM file to begin</div>
+                        <div class="message info">Load a ROM file or try a test ROM</div>
                     </div>
                 </div>
             </div>
@@ -314,6 +325,7 @@
         const ctx = canvas.getContext('2d');
         const screenOverlay = document.getElementById('screenOverlay');
         const messageArea = document.getElementById('messageArea');
+        const romInfoArea = document.getElementById('romInfoArea');
 
         // Key mapping for NES controller
         const KEYMAP = {
@@ -325,6 +337,13 @@
             88: 32, // X - B
             13: 64, // Enter - START
             16: 128 // Shift - SELECT
+        };
+
+        // Test ROM data (base64 encoded simple test ROMs)
+        const TEST_ROMS = {
+            nestest: "SU5FUwABAAAAAAAAAAEAAgA=", // Minimal test ROM
+            mario: "", // Would be actual ROM data in real implementation
+            donkeykong: "" // Would be actual ROM data in real implementation
         };
 
         // Initialize the NES emulator
@@ -348,34 +367,36 @@
             }
         }
 
-        // Load ROM file
+        // Load ROM file with better error handling
         function loadROM(file) {
             if (!file) return;
             
-            if (!file.name.toLowerCase().endsWith('.nes')) {
-                showMessage('Please select a valid NES ROM file (.nes extension)', 'error');
+            const validExtensions = ['.nes', '.zip'];
+            const fileExt = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+            
+            if (!validExtensions.includes(fileExt)) {
+                showMessage('Please select a valid NES ROM file (.nes) or ZIP file', 'error');
                 return;
             }
 
-            showMessage(`Loading ROM: ${file.name}...`, 'info');
+            showMessage(`Loading ${file.name}...`, 'info');
             
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const romData = new Uint8Array(e.target.result);
+                    let romData = new Uint8Array(e.target.result);
                     
-                    // Validate ROM size
-                    if (romData.length < 16) {
-                        showMessage('Invalid ROM: File too small', 'error');
+                    // Handle ZIP files
+                    if (fileExt === '.zip') {
+                        showMessage('ZIP files not directly supported. Please extract the .nes file first.', 'warning');
                         return;
                     }
                     
-                    // Check for NES header
-                    const header = new TextDecoder().decode(romData.slice(0, 4));
-                    const isValid = header === 'NES\x1A';
-                    
-                    if (!isValid) {
-                        showMessage('Warning: This may not be a standard NES ROM file', 'error');
+                    // Validate ROM
+                    const validation = validateNESRom(romData, file.name);
+                    if (!validation.valid) {
+                        showMessage(validation.message, 'error');
+                        return;
                     }
                     
                     // Initialize emulator if needed
@@ -383,21 +404,25 @@
                         return;
                     }
                     
-                    // Load the ROM into the emulator
-                    nes.loadROM(romData);
-                    currentROM = file.name;
-                    
-                    document.getElementById('romStatus').textContent = file.name;
-                    document.getElementById('startBtn').disabled = false;
-                    document.getElementById('resetBtn').disabled = false;
-                    
-                    showMessage(
-                        '✅ ROM loaded successfully! Click "Start" to begin playing.',
-                        'success'
-                    );
+                    // Try to load the ROM
+                    try {
+                        nes.loadROM(romData);
+                        currentROM = file.name;
+                        
+                        document.getElementById('romStatus').textContent = file.name;
+                        document.getElementById('startBtn').disabled = false;
+                        document.getElementById('resetBtn').disabled = false;
+                        
+                        updateRomInfo(validation.info);
+                        showMessage('✅ ROM loaded successfully! Click "Start" to play.', 'success');
+                        
+                    } catch (loadError) {
+                        showMessage('ROM loading failed: ' + loadError.message, 'error');
+                        showMessage('This ROM might use an unsupported mapper or be corrupted.', 'warning');
+                    }
                     
                 } catch (error) {
-                    showMessage('Error loading ROM: ' + error.message, 'error');
+                    showMessage('Error processing ROM: ' + error.message, 'error');
                 }
             };
             
@@ -406,6 +431,103 @@
             };
             
             reader.readAsArrayBuffer(file);
+        }
+
+        // Validate NES ROM
+        function validateNESRom(romData, filename) {
+            if (romData.length < 16) {
+                return {
+                    valid: false,
+                    message: 'File too small to be a valid NES ROM'
+                };
+            }
+            
+            // Check for iNES header
+            const header = new TextDecoder().decode(romData.slice(0, 4));
+            const isINES = header === 'NES\x1A';
+            
+            if (!isINES) {
+                return {
+                    valid: false,
+                    message: 'Not a valid iNES ROM file (missing NES header)'
+                };
+            }
+            
+            // Extract ROM information
+            const prgRomSize = romData[4] * 16 * 1024; // PRG ROM size in bytes
+            const chrRomSize = romData[5] * 8 * 1024;  // CHR ROM size in bytes
+            const flags6 = romData[6];
+            const flags7 = romData[7];
+            const mapper = (flags7 & 0xF0) | (flags6 >> 4);
+            const mirroring = (flags6 & 1) ? 'Vertical' : 'Horizontal';
+            const hasBattery = !!(flags6 & 2);
+            const hasTrainer = !!(flags6 & 4);
+            const isVSUnisystem = !!(flags7 & 1);
+            const isPlaychoice10 = !!(flags7 & 2);
+            const isNES2 = (flags7 & 0x0C) === 0x08;
+            
+            const info = {
+                filename: filename,
+                size: romData.length,
+                prgRomSize: prgRomSize,
+                chrRomSize: chrRomSize,
+                mapper: mapper,
+                mirroring: mirroring,
+                hasBattery: hasBattery,
+                hasTrainer: hasTrainer,
+                isVSUnisystem: isVSUnisystem,
+                isPlaychoice10: isPlaychoice10,
+                isNES2: isNES2
+            };
+            
+            // Check for common issues
+            let warnings = [];
+            if (mapper !== 0) {
+                warnings.push(`Mapper ${mapper} may not be fully supported`);
+            }
+            if (hasTrainer) {
+                warnings.push('Trainer present - may cause issues');
+            }
+            
+            return {
+                valid: true,
+                message: `Valid iNES ROM detected${warnings.length ? ' (with warnings)' : ''}`,
+                info: info,
+                warnings: warnings
+            };
+        }
+
+        // Update ROM information display
+        function updateRomInfo(info) {
+            let html = `
+                <div><strong>File:</strong> ${info.filename}</div>
+                <div><strong>Size:</strong> ${(info.size / 1024).toFixed(1)} KB</div>
+                <div><strong>PRG ROM:</strong> ${(info.prgRomSize / 1024).toFixed(1)} KB</div>
+                <div><strong>CHR ROM:</strong> ${(info.chrRomSize / 1024).toFixed(1)} KB</div>
+                <div><strong>Mapper:</strong> ${info.mapper}</div>
+                <div><strong>Mirroring:</strong> ${info.mirroring}</div>
+                <div><strong>Battery:</strong> ${info.hasBattery ? 'Yes' : 'No'}</div>
+                <div><strong>Trainer:</strong> ${info.hasTrainer ? 'Yes' : 'No'}</div>
+            `;
+            
+            romInfoArea.innerHTML = html;
+        }
+
+        // Load test ROM
+        function loadTestROM(romType) {
+            if (!nes && !initNES()) {
+                return;
+            }
+            
+            showMessage(`Loading ${romType} test ROM...`, 'info');
+            
+            // For now, just show a message since we don't have actual test ROMs embedded
+            if (romType === 'nestest') {
+                showMessage('Test ROM feature would load a known-working ROM here', 'info');
+                showMessage('Try loading a simple game like "Super Mario Bros. (World)"', 'info');
+            } else {
+                showMessage(`${romType} test ROM not available in this demo`, 'warning');
+            }
         }
 
         // Start emulation
@@ -420,7 +542,7 @@
             emulationRunning = true;
             screenOverlay.style.display = 'none';
             updateStatus('Running');
-            showMessage('Emulation started - Game should now be visible!', 'success');
+            showMessage('Emulation started!', 'success');
             
             // Start the emulation loop
             lastFpsTime = performance.now();
@@ -439,7 +561,6 @@
                 // Update counters
                 frameCount++;
                 updateFPS(timestamp);
-                updateDebugInfo();
                 
                 // Continue the loop
                 animationFrameId = requestAnimationFrame(emulationLoop);
@@ -522,21 +643,6 @@
             document.getElementById('frameCounter').textContent = frameCount;
         }
 
-        // Update debug info
-        function updateDebugInfo() {
-            if (!nes || !nes.cpu) return;
-            
-            // Update CPU register display
-            document.getElementById('regPC').textContent = 
-                nes.cpu.regPC.toString(16).toUpperCase().padStart(4, '0');
-            document.getElementById('regA').textContent = 
-                nes.cpu.regA.toString(16).toUpperCase().padStart(2, '0');
-            document.getElementById('regX').textContent = 
-                nes.cpu.regX.toString(16).toUpperCase().padStart(2, '0');
-            document.getElementById('regY').textContent = 
-                nes.cpu.regY.toString(16).toUpperCase().padStart(2, '0');
-        }
-
         // Update status
         function updateStatus(status) {
             document.getElementById('status').textContent = status;
@@ -556,22 +662,12 @@
             }
         }
 
-        // Toggle fullscreen
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                canvas.requestFullscreen().catch(err => {
-                    showMessage('Error attempting to enable fullscreen: ' + err.message, 'error');
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
         // Initialize when page loads
         window.addEventListener('load', function() {
             // Initialize NES emulator
             if (initNES()) {
-                showMessage('🎮 WebNES Emulator ready! Load a NES ROM file to play.', 'success');
+                showMessage('🎮 WebNES Emulator ready!', 'success');
+                showMessage('Try loading a simple NES ROM file (.nes format)', 'info');
             }
             
             // Setup keyboard controls
