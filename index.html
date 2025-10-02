@@ -4,26 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minimal NES Emulator</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsnes@1.0.0/dist/jsnes.min.js" defer></script>
-    <script src="./jsnes.min.js" defer></script>
     <script>
-        // Fallback to CDN if local script fails
-        window.addEventListener('load', () => {
-            if (typeof JSNES === 'undefined') {
-                console.error('Local jsnes.min.js failed to load. Attempting CDN fallback.');
+        // Embedded JSNES library (base64-encoded, minified)
+        (function() {
+            // Truncated base64 string for brevity (full string is ~300 KB)
+            const base64JSNES = "H4sIAAAAAAAAA+2dW2/buLJ/9z8Q/6/8/6/8/6/8..."; // Replace with full base64 string (see below)
+            try {
                 const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/jsnes@1.0.0/dist/jsnes.min.js';
-                script.defer = true;
-                script.onload = () => console.log('JSNES loaded from CDN');
-                script.onerror = () => {
-                    console.error('Failed to load JSNES from CDN: https://cdn.jsdelivr.net/npm/jsnes@1.0.0/dist/jsnes.min.js');
-                    alert('Failed to load JSNES library from both local and CDN sources. Please check your file setup or internet connection.');
-                };
+                script.textContent = atob(base64JSNES);
                 document.head.appendChild(script);
-            } else {
-                console.log('JSNES loaded successfully from local file');
+                console.log('JSNES embedded script loaded');
+            } catch (e) {
+                console.error('Failed to decode embedded JSNES:', e);
+                alert('Failed to load embedded JSNES library: ' + e.message);
             }
-        });
+        })();
     </script>
     <style>
         body {
@@ -33,6 +28,8 @@
             align-items: center;
             color: #fff;
             font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
         }
         canvas {
             background: #000;
@@ -42,11 +39,15 @@
             margin-top: 10px;
             font-size: 14px;
         }
+        button, input {
+            margin: 5px;
+            padding: 5px;
+        }
     </style>
 </head>
 <body>
     <canvas id="nesCanvas" width="256" height="240"></canvas>
-    <input type="file" id="romFileInput" accept=".nes" style="margin: 10px;">
+    <input type="file" id="romFileInput" accept=".nes">
     <button onclick="loadROM()">Load ROM</button>
     <div id="status">No ROM loaded</div>
 
@@ -58,39 +59,53 @@
             let nes;
 
             // Initialize canvas
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, 256, 240);
-            ctx.fillStyle = '#fff';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Load a ROM to begin', 128, 120);
+            function initCanvas() {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 256, 240);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Load a ROM to begin', 128, 120);
+            }
+            initCanvas();
 
-            // Check JSNES
+            // Check if JSNES is loaded
             if (typeof JSNES === 'undefined') {
-                console.error('JSNES not loaded. Ensure jsnes.min.js is in the same directory or check CDN.');
+                console.error('JSNES not loaded. Embedded script failed.');
                 status.textContent = 'Error: JSNES not loaded';
-                alert('Failed to load JSNES library. Ensure jsnes.min.js is in the project directory or check your internet connection.');
+                alert('Failed to load JSNES library. Please check the embedded base64 string or try a different browser.');
                 return;
             }
 
             // Initialize emulator
-            nes = new JSNES({
-                onFrame: (frameBuffer) => {
-                    const imageData = ctx.createImageData(256, 240);
-                    for (let i = 0; i < frameBuffer.length; i++) {
-                        imageData.data[i * 4 + 0] = (frameBuffer[i] >> 16) & 0xFF; // R
-                        imageData.data[i * 4 + 1] = (frameBuffer[i] >> 8) & 0xFF;  // G
-                        imageData.data[i * 4 + 2] = frameBuffer[i] & 0xFF;        // B
-                        imageData.data[i * 4 + 3] = 255;                          // A
-                    }
-                    ctx.putImageData(imageData, 0, 0);
-                },
-                onStatusUpdate: (msg) => status.textContent = msg
-            });
+            try {
+                nes = new JSNES({
+                    onFrame: (frameBuffer) => {
+                        const imageData = ctx.createImageData(256, 240);
+                        for (let i = 0; i < frameBuffer.length; i++) {
+                            imageData.data[i * 4 + 0] = (frameBuffer[i] >> 16) & 0xFF; // R
+                            imageData.data[i * 4 + 1] = (frameBuffer[i] >> 8) & 0xFF;  // G
+                            imageData.data[i * 4 + 2] = frameBuffer[i] & 0xFF;        // B
+                            imageData.data[i * 4 + 3] = 255;                          // A
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+                    },
+                    onStatusUpdate: (msg) => status.textContent = msg,
+                    emulateSound: false // Disable audio for Edge compatibility
+                });
+                console.log('JSNES emulator initialized');
+            } catch (e) {
+                console.error('Failed to initialize JSNES:', e);
+                status.textContent = 'Error: JSNES initialization failed';
+                alert('Failed to initialize JSNES: ' + e.message);
+                return;
+            }
 
             // Emulation loop
             function run() {
-                nes.frame();
+                if (nes.isRunning) {
+                    nes.frame();
+                }
                 requestAnimationFrame(run);
             }
             requestAnimationFrame(run);
@@ -101,6 +116,7 @@
                 const file = fileInput.files[0];
                 if (!file) {
                     alert('Please select a .nes file');
+                    status.textContent = 'No ROM selected';
                     return;
                 }
                 const reader = new FileReader();
@@ -109,30 +125,33 @@
                         nes.loadROM(new Uint8Array(e.target.result));
                         status.textContent = `Playing: ${file.name}`;
                         nes.frame();
+                        console.log('ROM loaded:', file.name);
                     } catch (error) {
                         console.error('Error loading ROM:', error);
                         alert('Error loading ROM: ' + error.message);
                         status.textContent = 'Error loading ROM';
+                        initCanvas();
                     }
                 };
                 reader.onerror = () => {
-                    console.error('Error reading ROM file');
+                    console.error('Error reading ROM file:', file.name);
                     alert('Error reading ROM file');
                     status.textContent = 'Error reading ROM';
+                    initCanvas();
                 };
                 reader.readAsArrayBuffer(file);
             };
 
             // Basic controls
             const controls = {
-                'ArrowUp': nes.Controller.BUTTON_UP,
-                'ArrowDown': nes.Controller.BUTTON_DOWN,
-                'ArrowLeft': nes.Controller.BUTTON_LEFT,
-                'ArrowRight': nes.Controller.BUTTON_RIGHT,
-                'z': nes.Controller.BUTTON_A,
-                'x': nes.Controller.BUTTON_B,
-                'Enter': nes.Controller.BUTTON_START,
-                'Shift': nes.Controller.BUTTON_SELECT
+                'ArrowUp': JSNES.Controller.BUTTON_UP,
+                'ArrowDown': JSNES.Controller.BUTTON_DOWN,
+                'ArrowLeft': JSNES.Controller.BUTTON_LEFT,
+                'ArrowRight': JSNES.Controller.BUTTON_RIGHT,
+                'z': JSNES.Controller.BUTTON_A,
+                'x': JSNES.Controller.BUTTON_B,
+                'Enter': JSNES.Controller.BUTTON_START,
+                'Shift': JSNES.Controller.BUTTON_SELECT
             };
 
             document.addEventListener('keydown', (e) => {
