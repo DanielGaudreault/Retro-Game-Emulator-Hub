@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebNES - FCEUX-like NES Emulator</title>
-    <script src="https://unpkg.com/jsnes@1.0.0/dist/jsnes.min.js" defer></script>
+    <script src="./jsnes.min.js" defer></script>
     <style>
         * {
             margin: 0;
@@ -602,7 +602,7 @@
 
             // Check if JSNES is loaded
             if (typeof JSNES === 'undefined') {
-                alert('Failed to load JSNES library. Please check your internet connection or try again later.');
+                alert('Failed to load JSNES library. Please ensure jsnes.min.js is correctly included in the project directory.');
                 statusMessage.textContent = 'Error: JSNES not loaded';
                 return;
             }
