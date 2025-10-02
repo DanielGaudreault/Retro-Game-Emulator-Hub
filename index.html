@@ -4,7 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebNES - FCEUX-like NES Emulator</title>
+    <!-- Local JSNES script with CDN fallback -->
     <script src="./jsnes.min.js" defer></script>
+    <script>
+        // Fallback to CDN if local script fails
+        window.addEventListener('load', () => {
+            if (typeof JSNES === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/jsnes@1.0.0/dist/jsnes.min.js';
+                script.defer = true;
+                script.onerror = () => {
+                    console.error('Failed to load JSNES from both local and CDN sources.');
+                    alert('Failed to load JSNES library from both local and CDN sources. Please check your setup.');
+                };
+                document.head.appendChild(script);
+            }
+        });
+    </script>
     <style>
         * {
             margin: 0;
@@ -602,7 +618,8 @@
 
             // Check if JSNES is loaded
             if (typeof JSNES === 'undefined') {
-                alert('Failed to load JSNES library. Please ensure jsnes.min.js is correctly included in the project directory.');
+                console.error('JSNES library not loaded. Check if jsnes.min.js is in the correct directory or if the CDN fallback failed.');
+                alert('Failed to load JSNES library. Please ensure jsnes.min.js is in the project directory or check your internet for the CDN fallback.');
                 statusMessage.textContent = 'Error: JSNES not loaded';
                 return;
             }
@@ -710,7 +727,7 @@
                     }
                 };
                 reader.onerror = function() {
-                    console.error('Error reading ROM file');
+                    console.error('Error reading ROM file:', romFileInput.files[0]);
                     alert('Error reading ROM file.');
                     emulatorState.loaded = false;
                     gameInfo.textContent = 'No ROM loaded';
