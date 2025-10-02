@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebNES - Robust NES Emulator</title>
-    <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
+    <title>WebNES - Compatible NES Emulator</title>
     <style>
         * {
             margin: 0;
@@ -120,7 +119,7 @@
         }
 
         .info-panel {
-            width: 300px;
+            width: 400px;
             background: #2a2a2a;
             border-radius: 8px;
             padding: 20px;
@@ -206,29 +205,52 @@
         }
 
         .test-roms {
-            margin-top: 10px;
+            margin: 15px 0;
         }
 
         .test-rom-btn {
             background: #555;
             border: none;
             color: white;
-            padding: 8px 12px;
+            padding: 10px 15px;
             cursor: pointer;
             border-radius: 4px;
-            font-size: 11px;
-            margin: 2px;
+            font-size: 12px;
+            margin: 5px;
+            display: block;
+            width: 200px;
         }
 
         .test-rom-btn:hover {
             background: #666;
+        }
+
+        .mapper-list {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .mapper-item {
+            padding: 2px 0;
+        }
+
+        .mapper-supported {
+            color: #4CAF50;
+        }
+
+        .mapper-unsupported {
+            color: #F44336;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 WebNES - Robust NES Emulator</h1>
+            <h1>🎮 WebNES - Compatible NES Emulator</h1>
         </div>
 
         <div class="main-content">
@@ -237,21 +259,17 @@
                     <canvas id="nesCanvas" width="256" height="240"></canvas>
                     <div class="screen-overlay" id="screenOverlay">
                         <h2>WebNES Emulator</h2>
-                        <p>Load a NES ROM file or try a test ROM</p>
+                        <p>Load a compatible NES ROM file</p>
                         <div style="margin: 20px 0;">
                             <button class="btn btn-primary" onclick="document.getElementById('romFile').click()">
                                 📁 Load ROM File
                             </button>
-                            <input type="file" id="romFile" accept=".nes,.zip" style="display: none;" onchange="loadROM(this.files[0])">
+                            <input type="file" id="romFile" accept=".nes" style="display: none;" onchange="loadROM(this.files[0])">
                         </div>
                         <div class="test-roms">
-                            <button class="test-rom-btn" onclick="loadTestROM('nestest')">NESTest ROM</button>
-                            <button class="test-rom-btn" onclick="loadTestROM('mario')">Mario Bros</button>
-                            <button class="test-rom-btn" onclick="loadTestROM('donkeykong')">Donkey Kong</button>
-                        </div>
-                        <div class="instructions">
-                            <strong>Supported formats:</strong> .nes (iNES), .zip containing .nes files<br>
-                            <strong>Controls:</strong> <span class="key">Arrows</span> <span class="key">Z</span> <span class="key">X</span> <span class="key">Enter</span> <span class="key">Shift</span>
+                            <p><strong>Try these compatible ROM types:</strong></p>
+                            <button class="test-rom-btn" onclick="showCompatibleGames()">Show Compatible Games</button>
+                            <button class="test-rom-btn" onclick="showMapperInfo()">Show Mapper Support</button>
                         </div>
                     </div>
                 </div>
@@ -272,7 +290,7 @@
                 </div>
 
                 <div class="instructions">
-                    <strong>Note:</strong> Some ROMs may not work due to mapper limitations. Try the test ROMs first!
+                    <strong>Tip:</strong> Games with mapper 0 (NROM) work best. Try early NES games like Super Mario Bros.
                 </div>
             </div>
 
@@ -289,7 +307,7 @@
                         FPS: <span class="status-value" id="fpsCounter">0</span>
                     </div>
                     <div class="status-item">
-                        Frames: <span class="status-value" id="frameCounter">0</span>
+                        Mapper: <span class="status-value" id="mapperInfo">Unknown</span>
                     </div>
                 </div>
 
@@ -301,9 +319,18 @@
                 </div>
 
                 <div class="panel-section">
+                    <div class="panel-title">Compatibility</div>
+                    <div id="compatibilityInfo">
+                        <div class="instructions">
+                            JSNES supports limited mappers. Mapper 0 (NROM) works best.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
                     <div class="panel-title">Messages</div>
                     <div id="messageArea">
-                        <div class="message info">Load a ROM file or try a test ROM</div>
+                        <div class="message info">Load a NES ROM file to begin</div>
                     </div>
                 </div>
             </div>
@@ -319,6 +346,7 @@
         let lastFpsTime = 0;
         let currentFps = 0;
         let currentROM = null;
+        let currentMapper = null;
 
         // DOM elements
         const canvas = document.getElementById('nesCanvas');
@@ -326,6 +354,7 @@
         const screenOverlay = document.getElementById('screenOverlay');
         const messageArea = document.getElementById('messageArea');
         const romInfoArea = document.getElementById('romInfoArea');
+        const compatibilityInfo = document.getElementById('compatibilityInfo');
 
         // Key mapping for NES controller
         const KEYMAP = {
@@ -339,12 +368,33 @@
             16: 128 // Shift - SELECT
         };
 
-        // Test ROM data (base64 encoded simple test ROMs)
-        const TEST_ROMS = {
-            nestest: "SU5FUwABAAAAAAAAAAEAAgA=", // Minimal test ROM
-            mario: "", // Would be actual ROM data in real implementation
-            donkeykong: "" // Would be actual ROM data in real implementation
+        // JSNES supported mappers (limited set)
+        const SUPPORTED_MAPPERS = {
+            0: "NROM (No mapper) - FULLY SUPPORTED",
+            1: "MMC1 - PARTIAL SUPPORT",
+            2: "UNROM - BASIC SUPPORT", 
+            3: "CNROM - BASIC SUPPORT",
+            4: "MMC3 - PARTIAL SUPPORT",
+            7: "AxROM - BASIC SUPPORT"
         };
+
+        // Games known to work with JSNES
+        const COMPATIBLE_GAMES = [
+            "Super Mario Bros. (World)",
+            "Donkey Kong (World)",
+            "Ice Climber (World)",
+            "Balloon Fight (World)",
+            "Excitebike (World)",
+            "Tennis (World)",
+            "Golf (World)",
+            "Pinball (World)",
+            "Clu Clu Land (World)",
+            "Wrecking Crew (World)",
+            "Donkey Kong Jr. (World)",
+            "Mario Bros. (World)",
+            "Popeye (World)",
+            "10-Yard Fight (World)"
+        ];
 
         // Initialize the NES emulator
         function initNES() {
@@ -360,6 +410,7 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 
                 showMessage('NES emulator initialized successfully', 'success');
+                showMessage('Try games with mapper 0 (early NES games)', 'info');
                 return true;
             } catch (error) {
                 showMessage('Error initializing NES emulator: ' + error.message, 'error');
@@ -367,15 +418,12 @@
             }
         }
 
-        // Load ROM file with better error handling
+        // Load ROM file with enhanced compatibility checking
         function loadROM(file) {
             if (!file) return;
             
-            const validExtensions = ['.nes', '.zip'];
-            const fileExt = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-            
-            if (!validExtensions.includes(fileExt)) {
-                showMessage('Please select a valid NES ROM file (.nes) or ZIP file', 'error');
+            if (!file.name.toLowerCase().endsWith('.nes')) {
+                showMessage('Please select a valid NES ROM file (.nes extension)', 'error');
                 return;
             }
 
@@ -384,18 +432,15 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    let romData = new Uint8Array(e.target.result);
+                    const romData = new Uint8Array(e.target.result);
                     
-                    // Handle ZIP files
-                    if (fileExt === '.zip') {
-                        showMessage('ZIP files not directly supported. Please extract the .nes file first.', 'warning');
-                        return;
-                    }
-                    
-                    // Validate ROM
-                    const validation = validateNESRom(romData, file.name);
+                    // Validate ROM and check compatibility
+                    const validation = validateAndCheckCompatibility(romData, file.name);
                     if (!validation.valid) {
                         showMessage(validation.message, 'error');
+                        if (validation.suggestion) {
+                            showMessage(validation.suggestion, 'warning');
+                        }
                         return;
                     }
                     
@@ -408,17 +453,28 @@
                     try {
                         nes.loadROM(romData);
                         currentROM = file.name;
+                        currentMapper = validation.info.mapper;
                         
                         document.getElementById('romStatus').textContent = file.name;
+                        document.getElementById('mapperInfo').textContent = `Mapper ${currentMapper}`;
                         document.getElementById('startBtn').disabled = false;
                         document.getElementById('resetBtn').disabled = false;
                         
                         updateRomInfo(validation.info);
-                        showMessage('✅ ROM loaded successfully! Click "Start" to play.', 'success');
+                        updateCompatibilityInfo(validation.info.mapper);
+                        
+                        if (validation.info.mapper === 0) {
+                            showMessage('✅ ROM loaded! This should work well. Click "Start" to play.', 'success');
+                        } else {
+                            showMessage('⚠️ ROM loaded but may have issues. Mapper ' + validation.info.mapper + ' has limited support.', 'warning');
+                            showMessage('Click "Start" to try running the game.', 'info');
+                        }
                         
                     } catch (loadError) {
                         showMessage('ROM loading failed: ' + loadError.message, 'error');
-                        showMessage('This ROM might use an unsupported mapper or be corrupted.', 'warning');
+                        if (currentMapper !== 0) {
+                            showMessage('Try finding a ROM with mapper 0 (NROM)', 'warning');
+                        }
                     }
                     
                 } catch (error) {
@@ -433,12 +489,13 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // Validate NES ROM
-        function validateNESRom(romData, filename) {
+        // Enhanced validation with compatibility checking
+        function validateAndCheckCompatibility(romData, filename) {
             if (romData.length < 16) {
                 return {
                     valid: false,
-                    message: 'File too small to be a valid NES ROM'
+                    message: 'File too small to be a valid NES ROM',
+                    suggestion: 'Try a different ROM file'
                 };
             }
             
@@ -449,22 +506,17 @@
             if (!isINES) {
                 return {
                     valid: false,
-                    message: 'Not a valid iNES ROM file (missing NES header)'
+                    message: 'Not a valid iNES ROM file (missing NES header)',
+                    suggestion: 'This may be a corrupted or non-standard ROM'
                 };
             }
             
             // Extract ROM information
-            const prgRomSize = romData[4] * 16 * 1024; // PRG ROM size in bytes
-            const chrRomSize = romData[5] * 8 * 1024;  // CHR ROM size in bytes
+            const prgRomSize = romData[4] * 16 * 1024;
+            const chrRomSize = romData[5] * 8 * 1024;
             const flags6 = romData[6];
             const flags7 = romData[7];
             const mapper = (flags7 & 0xF0) | (flags6 >> 4);
-            const mirroring = (flags6 & 1) ? 'Vertical' : 'Horizontal';
-            const hasBattery = !!(flags6 & 2);
-            const hasTrainer = !!(flags6 & 4);
-            const isVSUnisystem = !!(flags7 & 1);
-            const isPlaychoice10 = !!(flags7 & 2);
-            const isNES2 = (flags7 & 0x0C) === 0x08;
             
             const info = {
                 filename: filename,
@@ -472,26 +524,32 @@
                 prgRomSize: prgRomSize,
                 chrRomSize: chrRomSize,
                 mapper: mapper,
-                mirroring: mirroring,
-                hasBattery: hasBattery,
-                hasTrainer: hasTrainer,
-                isVSUnisystem: isVSUnisystem,
-                isPlaychoice10: isPlaychoice10,
-                isNES2: isNES2
+                flags6: flags6,
+                flags7: flags7
             };
             
-            // Check for common issues
+            // Check mapper support
+            if (!SUPPORTED_MAPPERS[mapper]) {
+                return {
+                    valid: false,
+                    message: `Mapper ${mapper} is not supported by this emulator`,
+                    suggestion: 'Try finding a ROM that uses mapper 0 (NROM)',
+                    info: info
+                };
+            }
+            
+            // Check for potential issues
             let warnings = [];
             if (mapper !== 0) {
-                warnings.push(`Mapper ${mapper} may not be fully supported`);
+                warnings.push(`Mapper ${mapper} has limited support`);
             }
-            if (hasTrainer) {
-                warnings.push('Trainer present - may cause issues');
+            if (flags6 & 4) { // Trainer present
+                warnings.push('ROM contains trainer data - may cause issues');
             }
             
             return {
                 valid: true,
-                message: `Valid iNES ROM detected${warnings.length ? ' (with warnings)' : ''}`,
+                message: `Valid ROM detected - ${SUPPORTED_MAPPERS[mapper]}`,
                 info: info,
                 warnings: warnings
             };
@@ -505,29 +563,52 @@
                 <div><strong>PRG ROM:</strong> ${(info.prgRomSize / 1024).toFixed(1)} KB</div>
                 <div><strong>CHR ROM:</strong> ${(info.chrRomSize / 1024).toFixed(1)} KB</div>
                 <div><strong>Mapper:</strong> ${info.mapper}</div>
-                <div><strong>Mirroring:</strong> ${info.mirroring}</div>
-                <div><strong>Battery:</strong> ${info.hasBattery ? 'Yes' : 'No'}</div>
-                <div><strong>Trainer:</strong> ${info.hasTrainer ? 'Yes' : 'No'}</div>
+                <div><strong>Support:</strong> ${SUPPORTED_MAPPERS[info.mapper] || 'UNSUPPORTED'}</div>
             `;
             
             romInfoArea.innerHTML = html;
         }
 
-        // Load test ROM
-        function loadTestROM(romType) {
-            if (!nes && !initNES()) {
-                return;
-            }
+        // Update compatibility information
+        function updateCompatibilityInfo(mapper) {
+            let html = '';
             
-            showMessage(`Loading ${romType} test ROM...`, 'info');
-            
-            // For now, just show a message since we don't have actual test ROMs embedded
-            if (romType === 'nestest') {
-                showMessage('Test ROM feature would load a known-working ROM here', 'info');
-                showMessage('Try loading a simple game like "Super Mario Bros. (World)"', 'info');
+            if (mapper === 0) {
+                html = '<div class="message success">✅ This ROM should work perfectly!</div>';
+            } else if (SUPPORTED_MAPPERS[mapper]) {
+                html = `<div class="message warning">⚠️ ${SUPPORTED_MAPPERS[mapper]}</div>`;
             } else {
-                showMessage(`${romType} test ROM not available in this demo`, 'warning');
+                html = '<div class="message error">❌ Mapper not supported</div>';
             }
+            
+            compatibilityInfo.innerHTML = html;
+        }
+
+        // Show compatible games list
+        function showCompatibleGames() {
+            let html = '<div class="panel-title">Known Compatible Games</div>';
+            html += '<div class="mapper-list">';
+            COMPATIBLE_GAMES.forEach(game => {
+                html += `<div class="mapper-item mapper-supported">✅ ${game}</div>`;
+            });
+            html += '</div>';
+            html += '<div class="instructions" style="margin-top: 10px;">These games use mapper 0 and should work well.</div>';
+            
+            compatibilityInfo.innerHTML = html;
+        }
+
+        // Show mapper support information
+        function showMapperInfo() {
+            let html = '<div class="panel-title">Mapper Support</div>';
+            html += '<div class="mapper-list">';
+            Object.keys(SUPPORTED_MAPPERS).forEach(mapper => {
+                const supportLevel = mapper === '0' ? 'mapper-supported' : 'mapper-unsupported';
+                html += `<div class="mapper-item ${supportLevel}">Mapper ${mapper}: ${SUPPORTED_MAPPERS[mapper]}</div>`;
+            });
+            html += '</div>';
+            html += '<div class="instructions" style="margin-top: 10px;">Mapper 0 (NROM) has the best support.</div>';
+            
+            compatibilityInfo.innerHTML = html;
         }
 
         // Start emulation
@@ -542,7 +623,12 @@
             emulationRunning = true;
             screenOverlay.style.display = 'none';
             updateStatus('Running');
-            showMessage('Emulation started!', 'success');
+            
+            if (currentMapper === 0) {
+                showMessage('🎮 Emulation started! Game should be working.', 'success');
+            } else {
+                showMessage('🎮 Emulation started! Game may have graphical or gameplay issues.', 'warning');
+            }
             
             // Start the emulation loop
             lastFpsTime = performance.now();
@@ -580,11 +666,10 @@
                 const pixel = frameBuffer[i];
                 const baseIndex = i * 4;
                 
-                // Convert RGB number to components
-                imageData.data[baseIndex] = (pixel >> 16) & 0xFF;     // Red
-                imageData.data[baseIndex + 1] = (pixel >> 8) & 0xFF;  // Green
-                imageData.data[baseIndex + 2] = pixel & 0xFF;         // Blue
-                imageData.data[baseIndex + 3] = 255;                  // Alpha
+                imageData.data[baseIndex] = (pixel >> 16) & 0xFF;
+                imageData.data[baseIndex + 1] = (pixel >> 8) & 0xFF;
+                imageData.data[baseIndex + 2] = pixel & 0xFF;
+                imageData.data[baseIndex + 3] = 255;
             }
             
             ctx.putImageData(imageData, 0, 0);
@@ -597,16 +682,12 @@
             emulationRunning = !emulationRunning;
             
             if (emulationRunning) {
-                // Resume
                 animationFrameId = requestAnimationFrame(emulationLoop);
                 updateStatus('Running');
                 showMessage('Emulation resumed', 'success');
                 document.getElementById('pauseBtn').textContent = 'Pause';
             } else {
-                // Pause
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                }
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
                 updateStatus('Paused');
                 showMessage('Emulation paused', 'info');
                 document.getElementById('pauseBtn').textContent = 'Resume';
@@ -637,10 +718,8 @@
                 currentFps = Math.round((frameCount * 1000) / (timestamp - lastFpsTime));
                 frameCount = 0;
                 lastFpsTime = timestamp;
-                
                 document.getElementById('fpsCounter').textContent = currentFps;
             }
-            document.getElementById('frameCounter').textContent = frameCount;
         }
 
         // Update status
@@ -653,10 +732,8 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
             messageDiv.textContent = message;
-            
             messageArea.insertBefore(messageDiv, messageArea.firstChild);
             
-            // Limit to 5 messages
             while (messageArea.children.length > 5) {
                 messageArea.removeChild(messageArea.lastChild);
             }
@@ -664,13 +741,11 @@
 
         // Initialize when page loads
         window.addEventListener('load', function() {
-            // Initialize NES emulator
             if (initNES()) {
                 showMessage('🎮 WebNES Emulator ready!', 'success');
-                showMessage('Try loading a simple NES ROM file (.nes format)', 'info');
+                showMessage('Look for games that use mapper 0 (early NES titles)', 'info');
+                showMapperInfo();
             }
-            
-            // Setup keyboard controls
             setupKeyboard();
         });
 
@@ -678,7 +753,6 @@
         function setupKeyboard() {
             document.addEventListener('keydown', function(e) {
                 if (!nes || !emulationRunning) return;
-                
                 const button = KEYMAP[e.keyCode];
                 if (button !== undefined) {
                     e.preventDefault();
@@ -688,7 +762,6 @@
 
             document.addEventListener('keyup', function(e) {
                 if (!nes || !emulationRunning) return;
-                
                 const button = KEYMAP[e.keyCode];
                 if (button !== undefined) {
                     e.preventDefault();
@@ -697,7 +770,7 @@
             });
         }
 
-        // Handle page visibility changes
+        // Handle page visibility
         document.addEventListener('visibilitychange', function() {
             if (document.hidden && emulationRunning) {
                 stopEmulation();
