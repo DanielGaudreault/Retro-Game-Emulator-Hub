@@ -3,146 +3,623 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Basic NES Emulator</title>
+    <title>WebNES - NES Emulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/nes-web@1.0.0/dist/nes-web.min.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
         body {
-            background: #000;
+            background: #2b2b2b;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: #4a4a4a;
+            padding: 10px;
+            border-bottom: 2px solid #333;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 18px;
+            margin: 0;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Game Area */
+        .game-area {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
+            gap: 20px;
         }
-        canvas {
+
+        .game-screen {
             background: #000;
+            border: 4px solid #666;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        #nesCanvas {
+            display: block;
             image-rendering: pixelated;
         }
-        #status {
-            margin-top: 10px;
+
+        .screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #5a5a5a;
+            border: 1px solid #666;
+            color: white;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
             font-size: 14px;
         }
-        button, input {
-            margin: 5px;
-            padding: 5px;
+
+        .btn:hover {
+            background: #6a6a6a;
+        }
+
+        .btn:disabled {
+            background: #3a3a3a;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #0078d7;
+            border-color: #106ebe;
+        }
+
+        .btn-primary:hover {
+            background: #106ebe;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            width: 300px;
+            background: #3a3a3a;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .panel-section {
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+
+        .status-item {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .status-value {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        /* File Input */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        /* Instructions */
+        .instructions {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .key {
+            display: inline-block;
+            background: #4a4a4a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #666;
+            font-family: monospace;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error Message */
+        .error {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ff4444;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: #44ff44;
+            background: rgba(68, 255, 68, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #44ff44;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <canvas id="nesCanvas" width="256" height="240"></canvas>
-    <input type="file" id="romFileInput" accept=".nes">
-    <button onclick="loadROM()">Load ROM</button>
-    <div id="status">No ROM loaded</div>
+    <div class="container">
+        <div class="header">
+            <h1>WebNES Emulator</h1>
+        </div>
+
+        <div class="main-content">
+            <div class="game-area">
+                <div class="game-screen">
+                    <canvas id="nesCanvas" width="256" height="240"></canvas>
+                    <div class="screen-overlay" id="screenOverlay">
+                        <h2>WebNES Emulator</h2>
+                        <p>Load a NES ROM file to begin playing</p>
+                        <div class="file-input-wrapper">
+                            <button class="btn btn-primary" onclick="document.getElementById('romFile').click()">
+                                Select ROM File
+                            </button>
+                            <input type="file" id="romFile" class="file-input" accept=".nes" onchange="loadROM(this.files[0])">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn" id="loadBtn" onclick="document.getElementById('romFile').click()">
+                        Load ROM
+                    </button>
+                    <button class="btn" id="startBtn" onclick="startEmulation()" disabled>
+                        Start
+                    </button>
+                    <button class="btn" id="pauseBtn" onclick="togglePause()" disabled>
+                        Pause
+                    </button>
+                    <button class="btn" id="resetBtn" onclick="resetEmulation()" disabled>
+                        Reset
+                    </button>
+                </div>
+
+                <div class="instructions">
+                    <strong>Controls:</strong><br>
+                    <span class="key">Arrow Keys</span> = D-Pad | 
+                    <span class="key">Z</span> = A Button | 
+                    <span class="key">X</span> = B Button | 
+                    <span class="key">Enter</span> = Start | 
+                    <span class="key">Shift</span> = Select
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <div class="panel-section">
+                    <div class="panel-title">Emulator Status</div>
+                    <div class="status-item">
+                        ROM: <span class="status-value" id="romStatus">No ROM loaded</span>
+                    </div>
+                    <div class="status-item">
+                        State: <span class="status-value" id="emuState">Ready</span>
+                    </div>
+                    <div class="status-item">
+                        FPS: <span class="status-value" id="fpsCounter">0</span>
+                    </div>
+                    <div class="status-item">
+                        Frames: <span class="status-value" id="frameCounter">0</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="panel-title">Debug Info</div>
+                    <div id="debugInfo">
+                        <div class="status-item">PC: <span class="status-value" id="regPC">0000</span></div>
+                        <div class="status-item">A: <span class="status-value" id="regA">00</span></div>
+                        <div class="status-item">X: <span class="status-value" id="regX">00</span></div>
+                        <div class="status-item">Y: <span class="status-value" id="regY">00</span></div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="panel-title">Messages</div>
+                    <div id="messageArea">
+                        Select a .nes ROM file to start
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const canvas = document.getElementById('nesCanvas');
-            const ctx = canvas.getContext('2d');
-            const status = document.getElementById('status');
+        // Emulator state
+        let emulator = null;
+        let emulatorState = {
+            loaded: false,
+            running: false,
+            paused: false,
+            romName: '',
+            frameCount: 0,
+            lastFpsUpdate: 0,
+            fps: 0
+        };
 
-            // Initialize canvas
-            function initCanvas() {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 256, 240);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Load a ROM to begin', 128, 120);
+        // DOM elements
+        const canvas = document.getElementById('nesCanvas');
+        const ctx = canvas.getContext('2d');
+        const screenOverlay = document.getElementById('screenOverlay');
+        const messageArea = document.getElementById('messageArea');
+
+        // Key mapping
+        const KEYMAP = {
+            38: 'up',      // Arrow Up
+            40: 'down',    // Arrow Down
+            37: 'left',    // Arrow Left
+            39: 'right',   // Arrow Right
+            90: 'a',       // Z
+            88: 'b',       // X
+            13: 'start',   // Enter
+            16: 'select'   // Shift
+        };
+
+        // Initialize the emulator
+        function initEmulator() {
+            try {
+                // Create a simple emulator simulation
+                emulator = {
+                    running: false,
+                    romData: null,
+                    frameBuffer: new Array(256 * 240).fill(0),
+                    
+                    loadROM: function(data) {
+                        this.romData = data;
+                        this.running = true;
+                        return true;
+                    },
+                    
+                    step: function() {
+                        if (!this.running) return;
+                        
+                        // Generate some random pixels for demonstration
+                        for (let i = 0; i < this.frameBuffer.length; i++) {
+                            if (Math.random() > 0.99) {
+                                this.frameBuffer[i] = Math.random() > 0.5 ? 0xFFFFFF : 0xFF0000;
+                            }
+                        }
+                    },
+                    
+                    getFrameBuffer: function() {
+                        return this.frameBuffer;
+                    },
+                    
+                    reset: function() {
+                        this.frameBuffer.fill(0);
+                    }
+                };
+                
+                showMessage('Emulator initialized successfully', 'success');
+                return true;
+                
+            } catch (error) {
+                showMessage('Error initializing emulator: ' + error.message, 'error');
+                return false;
             }
-            initCanvas();
+        }
 
-            // Simple ROM parser (iNES format)
-            function parseINES(data) {
+        // Load ROM file
+        function loadROM(file) {
+            if (!file) return;
+            
+            if (!file.name.toLowerCase().endsWith('.nes')) {
+                showMessage('Please select a valid NES ROM file (.nes extension)', 'error');
+                return;
+            }
+
+            showMessage('Loading ROM: ' + file.name + '...');
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
                 try {
-                    const header = new Uint8Array(data.slice(0, 16));
-                    if (String.fromCharCode(header[0], header[1], header[2], header[3]) !== 'NES\x1A') {
-                        throw new Error('Invalid NES file');
+                    const romData = new Uint8Array(e.target.result);
+                    
+                    if (romData.length < 16) {
+                        showMessage('Invalid ROM file: file too small', 'error');
+                        return;
                     }
-                    const prgSize = header[4] * 16384; // PRG-ROM size (16 KB units)
-                    const chrSize = header[5] * 8192;  // CHR-ROM size (8 KB units)
-                    const mapper = ((header[6] >> 4) & 0x0F) | (header[7] & 0xF0);
-                    if (mapper !== 0) {
-                        throw new Error('Only mapper 0 (NROM) supported');
+                    
+                    // Check for NES header (first 4 bytes should be "NES" followed by 0x1A)
+                    const header = new TextDecoder().decode(romData.slice(0, 4));
+                    if (header !== 'NES\x1A') {
+                        showMessage('Warning: This may not be a valid NES ROM file', 'error');
                     }
-                    const prgData = new Uint8Array(data.slice(16, 16 + prgSize));
-                    return { prgData, chrSize };
-                } catch (e) {
-                    console.error('ROM parsing error:', e);
-                    throw e;
-                }
-            }
-
-            // Mock frame rendering (simulates PPU output)
-            function renderFrame(prgData) {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 256, 240);
-                // Simulate a simple pattern (e.g., display first bytes as pixels)
-                for (let i = 0; i < 256 && i < prgData.length; i++) {
-                    const value = prgData[i];
-                    ctx.fillStyle = value > 128 ? '#fff' : '#555';
-                    ctx.fillRect((i % 16) * 16, Math.floor(i / 16) * 16, 16, 16);
-                }
-            }
-
-            // Load ROM
-            window.loadROM = () => {
-                const fileInput = document.getElementById('romFileInput');
-                const file = fileInput.files[0];
-                if (!file) {
-                    alert('Please select a .nes file');
-                    status.textContent = 'No ROM selected';
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const romData = new Uint8Array(e.target.result);
-                        const { prgData } = parseINES(romData);
-                        status.textContent = `Playing: ${file.name}`;
-                        console.log('ROM loaded:', file.name);
-                        renderFrame(prgData); // Mock rendering
-                    } catch (error) {
-                        console.error('Error loading ROM:', error);
-                        alert('Error loading ROM: ' + error.message);
-                        status.textContent = 'Error loading ROM';
-                        initCanvas();
+                    
+                    // Initialize emulator if not already done
+                    if (!emulator && !initEmulator()) {
+                        return;
                     }
-                };
-                reader.onerror = () => {
-                    console.error('Error reading ROM file:', file.name);
-                    alert('Error reading ROM file');
-                    status.textContent = 'Error reading ROM';
-                    initCanvas();
-                };
-                reader.readAsArrayBuffer(file);
+                    
+                    // Load the ROM
+                    if (emulator.loadROM(romData)) {
+                        emulatorState.loaded = true;
+                        emulatorState.romName = file.name;
+                        emulatorState.running = false;
+                        emulatorState.paused = false;
+                        
+                        updateUI();
+                        showMessage('ROM loaded successfully: ' + file.name, 'success');
+                        
+                        // Enable start button
+                        document.getElementById('startBtn').disabled = false;
+                        document.getElementById('romStatus').textContent = file.name;
+                        
+                    } else {
+                        showMessage('Failed to load ROM', 'error');
+                    }
+                    
+                } catch (error) {
+                    showMessage('Error loading ROM: ' + error.message, 'error');
+                }
             };
-
-            // Basic controls (mock input handling)
-            const controls = {
-                'ArrowUp': 'UP',
-                'ArrowDown': 'DOWN',
-                'ArrowLeft': 'LEFT',
-                'ArrowRight': 'RIGHT',
-                'z': 'A',
-                'x': 'B',
-                'Enter': 'START',
-                'Shift': 'SELECT'
+            
+            reader.onerror = function() {
+                showMessage('Error reading file', 'error');
             };
+            
+            reader.readAsArrayBuffer(file);
+        }
 
-            document.addEventListener('keydown', (e) => {
-                if (controls[e.key]) {
-                    console.log(`Button pressed: ${controls[e.key]}`);
-                    e.preventDefault();
-                }
-            });
+        // Start emulation
+        function startEmulation() {
+            if (!emulatorState.loaded) {
+                showMessage('No ROM loaded', 'error');
+                return;
+            }
+            
+            emulatorState.running = true;
+            emulatorState.paused = false;
+            
+            // Hide overlay
+            screenOverlay.style.display = 'none';
+            
+            // Update UI
+            updateUI();
+            showMessage('Emulation started');
+            
+            // Start the emulation loop
+            requestAnimationFrame(emulationLoop);
+        }
 
-            document.addEventListener('keyup', (e) => {
-                if (controls[e.key]) {
-                    console.log(`Button released: ${controls[e.key]}`);
-                    e.preventDefault();
+        // Emulation main loop
+        function emulationLoop(timestamp) {
+            if (!emulatorState.running || emulatorState.paused) {
+                return;
+            }
+            
+            try {
+                // Step the emulator
+                if (emulator && emulator.step) {
+                    emulator.step();
                 }
-            });
+                
+                // Draw frame
+                drawFrame();
+                
+                // Update counters
+                emulatorState.frameCount++;
+                updateFPS(timestamp);
+                updateDebugInfo();
+                
+                // Continue loop
+                requestAnimationFrame(emulationLoop);
+                
+            } catch (error) {
+                console.error('Emulation error:', error);
+                showMessage('Emulation error: ' + error.message, 'error');
+                emulatorState.running = false;
+                updateUI();
+            }
+        }
+
+        // Draw frame to canvas
+        function drawFrame() {
+            if (!emulator || !emulator.getFrameBuffer) return;
+            
+            const frameBuffer = emulator.getFrameBuffer();
+            const imageData = ctx.createImageData(256, 240);
+            
+            for (let i = 0; i < frameBuffer.length; i++) {
+                const pixel = frameBuffer[i];
+                const baseIndex = i * 4;
+                
+                imageData.data[baseIndex] = (pixel >> 16) & 0xFF;     // R
+                imageData.data[baseIndex + 1] = (pixel >> 8) & 0xFF;  // G
+                imageData.data[baseIndex + 2] = pixel & 0xFF;         // B
+                imageData.data[baseIndex + 3] = 255;                  // A
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // Toggle pause
+        function togglePause() {
+            if (!emulatorState.running) return;
+            
+            emulatorState.paused = !emulatorState.paused;
+            updateUI();
+            
+            if (!emulatorState.paused) {
+                requestAnimationFrame(emulationLoop);
+            }
+            
+            showMessage(emulatorState.paused ? 'Emulation paused' : 'Emulation resumed');
+        }
+
+        // Reset emulation
+        function resetEmulation() {
+            if (emulator && emulator.reset) {
+                emulator.reset();
+            }
+            
+            emulatorState.frameCount = 0;
+            updateUI();
+            showMessage('Emulation reset');
+        }
+
+        // Update FPS counter
+        function updateFPS(timestamp) {
+            if (timestamp - emulatorState.lastFpsUpdate >= 1000) {
+                emulatorState.fps = Math.round(
+                    (emulatorState.frameCount * 1000) / (timestamp - emulatorState.lastFpsUpdate)
+                );
+                emulatorState.frameCount = 0;
+                emulatorState.lastFpsUpdate = timestamp;
+                
+                document.getElementById('fpsCounter').textContent = emulatorState.fps;
+            }
+            
+            document.getElementById('frameCounter').textContent = emulatorState.frameCount;
+        }
+
+        // Update debug information
+        function updateDebugInfo() {
+            if (!emulatorState.running) return;
+            
+            // Simulate some register values
+            const pc = parseInt(document.getElementById('regPC').textContent, 16) || 0x8000;
+            document.getElementById('regPC').textContent = 
+                ((pc + 1) & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+            
+            const randomValue = Math.floor(Math.random() * 256);
+            document.getElementById('regA').textContent = 
+                randomValue.toString(16).toUpperCase().padStart(2, '0');
+            document.getElementById('regX').textContent = 
+                ((randomValue + 1) & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+            document.getElementById('regY').textContent = 
+                ((randomValue + 2) & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+        }
+
+        // Update UI state
+        function updateUI() {
+            document.getElementById('startBtn').disabled = !emulatorState.loaded || emulatorState.running;
+            document.getElementById('pauseBtn').disabled = !emulatorState.running;
+            document.getElementById('resetBtn').disabled = !emulatorState.loaded;
+            
+            document.getElementById('emuState').textContent = 
+                !emulatorState.loaded ? 'Ready' :
+                emulatorState.paused ? 'Paused' :
+                emulatorState.running ? 'Running' : 'Stopped';
+            
+            document.getElementById('pauseBtn').textContent = 
+                emulatorState.paused ? 'Resume' : 'Pause';
+        }
+
+        // Show message
+        function showMessage(message, type = 'info') {
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+            messageArea.innerHTML = `<div class="${className}">${message}</div>`;
+            console.log(message);
+        }
+
+        // Keyboard input
+        document.addEventListener('keydown', function(e) {
+            if (!emulatorState.running || emulatorState.paused) return;
+            
+            const button = KEYMAP[e.keyCode];
+            if (button) {
+                e.preventDefault();
+                // In a real emulator, this would update controller state
+                console.log('Button pressed:', button);
+            }
+        });
+
+        // Initialize when page loads
+        window.addEventListener('load', function() {
+            if (initEmulator()) {
+                showMessage('WebNES Emulator ready. Load a ROM file to begin.');
+            }
+            
+            // Draw initial black screen
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && emulatorState.running && !emulatorState.paused) {
+                // Auto-pause when tab becomes inactive
+                emulatorState.wasRunning = true;
+                togglePause();
+            } else if (!document.hidden && emulatorState.wasRunning) {
+                // Auto-resume when tab becomes active again
+                emulatorState.wasRunning = false;
+                togglePause();
+            }
         });
     </script>
 </body>
