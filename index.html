@@ -154,7 +154,7 @@
             margin-bottom: 20px;
             overflow: hidden;
             position: relative;
-            height: 300px;
+            height: 400px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -162,8 +162,7 @@
 
         #gameCanvas {
             display: block;
-            max-width: 100%;
-            max-height: 100%;
+            background: #000;
         }
 
         .placeholder-screen {
@@ -417,7 +416,7 @@
                         <i class="fas fa-upload"></i>
                         <p>Upload a ROM file to start playing</p>
                     </div>
-                    <canvas id="gameCanvas" style="display: none;"></canvas>
+                    <canvas id="gameCanvas" width="640" height="400" style="display: none;"></canvas>
                 </div>
                 
                 <div class="game-controls">
@@ -493,6 +492,14 @@
         const resetBtn = document.getElementById('resetBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
 
+        // Game state variables
+        let gameRunning = false;
+        let gamePaused = false;
+        let gameLoop;
+        let currentGame = null;
+        let score = 0;
+        let lives = 3;
+
         // File handling
         browseBtn.addEventListener('click', () => {
             fileInput.click();
@@ -545,9 +552,11 @@
             // Enable play button
             playBtn.disabled = false;
             
-            // In a real implementation, you would process the ROM file here
-            // and initialize the emulator with the ROM data
+            // Determine which game to load based on file extension
+            currentGame = determineGameType(file.name);
+            
             console.log('ROM file selected:', file.name, file.size, 'bytes');
+            console.log('Game type detected:', currentGame);
         }
 
         function formatFileSize(bytes) {
@@ -573,78 +582,56 @@
             return types[ext] || 'Unknown ROM Type';
         }
 
+        function determineGameType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            // For demo purposes, we'll assign different games based on file extension
+            const gameMap = {
+                'nes': 'space',
+                'gb': 'pong',
+                'gbc': 'breakout',
+                'gba': 'racer',
+                'smc': 'tetris',
+                'sfc': 'tetris',
+                'md': 'space',
+                'gen': 'space',
+                'a26': 'pong',
+                'bin': 'breakout'
+            };
+            return gameMap[ext] || 'space'; // Default to space invaders
+        }
+
         // Control buttons
         playBtn.addEventListener('click', () => {
-            // In a real implementation, this would start the emulator
             placeholderScreen.style.display = 'none';
             gameCanvas.style.display = 'block';
             playBtn.disabled = true;
             pauseBtn.disabled = false;
             resetBtn.disabled = false;
             
-            // Show a simulated game screen
-            const ctx = gameCanvas.getContext('2d');
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+            // Initialize and start the selected game
+            initGame();
+            gameRunning = true;
+            gamePaused = false;
             
-            ctx.fillStyle = '#ffcc00';
-            ctx.font = '20px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            ctx.fillText('GAME LOADED', gameCanvas.width/2, gameCanvas.height/2 - 30);
-            
-            ctx.fillStyle = '#00ffff';
-            ctx.font = '14px "Press Start 2P"';
-            ctx.fillText('EMULATOR RUNNING', gameCanvas.width/2, gameCanvas.height/2 + 10);
-            
-            ctx.fillStyle = '#ff0080';
-            ctx.font = '10px "Press Start 2P"';
-            ctx.fillText('(This is a simulation)', gameCanvas.width/2, gameCanvas.height/2 + 40);
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(updateGame, 1000/60); // 60 FPS
         });
 
         pauseBtn.addEventListener('click', () => {
-            // In a real implementation, this would pause the emulator
-            if (pauseBtn.textContent.includes('PAUSE')) {
-                pauseBtn.innerHTML = '<i class="fas fa-play"></i> RESUME';
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+                pauseBtn.innerHTML = gamePaused ? 
+                    '<i class="fas fa-play"></i> RESUME' : 
+                    '<i class="fas fa-pause"></i> PAUSE';
                 
-                const ctx = gameCanvas.getContext('2d');
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
-                
-                ctx.fillStyle = '#ff0080';
-                ctx.font = '24px "Press Start 2P"';
-                ctx.textAlign = 'center';
-                ctx.fillText('PAUSED', gameCanvas.width/2, gameCanvas.height/2);
-            } else {
-                pauseBtn.innerHTML = '<i class="fas fa-pause"></i> PAUSE';
-                
-                // Redraw the game screen
-                const ctx = gameCanvas.getContext('2d');
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
-                
-                ctx.fillStyle = '#ffcc00';
-                ctx.font = '20px "Press Start 2P"';
-                ctx.textAlign = 'center';
-                ctx.fillText('GAME LOADED', gameCanvas.width/2, gameCanvas.height/2 - 30);
-                
-                ctx.fillStyle = '#00ffff';
-                ctx.font = '14px "Press Start 2P"';
-                ctx.fillText('EMULATOR RUNNING', gameCanvas.width/2, gameCanvas.height/2 + 10);
-                
-                ctx.fillStyle = '#ff0080';
-                ctx.font = '10px "Press Start 2P"';
-                ctx.fillText('(This is a simulation)', gameCanvas.width/2, gameCanvas.height/2 + 40);
+                if (gamePaused) {
+                    drawPauseScreen();
+                }
             }
         });
 
         resetBtn.addEventListener('click', () => {
-            // In a real implementation, this would reset the emulator
-            placeholderScreen.style.display = 'block';
-            gameCanvas.style.display = 'none';
-            playBtn.disabled = false;
-            pauseBtn.disabled = true;
-            resetBtn.disabled = true;
-            pauseBtn.innerHTML = '<i class="fas fa-pause"></i> PAUSE';
+            resetGame();
         });
 
         fullscreenBtn.addEventListener('click', () => {
@@ -660,18 +647,350 @@
             }
         });
 
-        // Set canvas size to match the container
-        function resizeCanvas() {
-            const container = document.querySelector('.game-screen');
-            gameCanvas.width = container.clientWidth - 10;
-            gameCanvas.height = container.clientHeight - 10;
+        // Game initialization
+        function initGame() {
+            const ctx = gameCanvas.getContext('2d');
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            // Initialize game state based on selected game
+            score = 0;
+            lives = 3;
+            
+            // Draw initial game screen
+            drawGame();
         }
 
-        // Initial resize
-        resizeCanvas();
-        
-        // Resize on window resize
-        window.addEventListener('resize', resizeCanvas);
+        // Game update loop
+        function updateGame() {
+            if (!gameRunning || gamePaused) return;
+            
+            // Update game logic based on current game
+            updateGameLogic();
+            
+            // Draw the game
+            drawGame();
+        }
+
+        // Game-specific variables
+        let playerX = 320;
+        let invaders = [];
+        let bullets = [];
+        let invaderDirection = 1;
+        let invaderSpeed = 1;
+
+        // Initialize space invaders
+        function initSpaceInvaders() {
+            playerX = 320;
+            invaders = [];
+            bullets = [];
+            invaderDirection = 1;
+            invaderSpeed = 1;
+            
+            // Create invaders
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 10; col++) {
+                    invaders.push({
+                        x: col * 50 + 50,
+                        y: row * 30 + 50,
+                        width: 30,
+                        height: 20,
+                        alive: true
+                    });
+                }
+            }
+        }
+
+        // Update game logic based on current game type
+        function updateGameLogic() {
+            switch(currentGame) {
+                case 'space':
+                    updateSpaceInvaders();
+                    break;
+                case 'pong':
+                    updatePong();
+                    break;
+                case 'breakout':
+                    updateBreakout();
+                    break;
+                default:
+                    updateSpaceInvaders();
+            }
+        }
+
+        // Update space invaders game
+        function updateSpaceInvaders() {
+            // Move invaders
+            let moveDown = false;
+            for (let invader of invaders) {
+                if (!invader.alive) continue;
+                
+                invader.x += invaderSpeed * invaderDirection;
+                
+                // Check if any invader hits the edge
+                if (invader.x <= 10 || invader.x >= gameCanvas.width - 40) {
+                    moveDown = true;
+                }
+            }
+            
+            // Move invaders down and change direction if needed
+            if (moveDown) {
+                invaderDirection *= -1;
+                for (let invader of invaders) {
+                    if (invader.alive) {
+                        invader.y += 20;
+                    }
+                }
+                
+                // Increase speed
+                invaderSpeed += 0.2;
+            }
+            
+            // Move bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].y -= 5;
+                
+                // Remove bullets that go off screen
+                if (bullets[i].y < 0) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+                
+                // Check for collisions with invaders
+                for (let j = 0; j < invaders.length; j++) {
+                    if (invaders[j].alive && 
+                        bullets[i].x > invaders[j].x && 
+                        bullets[i].x < invaders[j].x + invaders[j].width &&
+                        bullets[i].y > invaders[j].y && 
+                        bullets[i].y < invaders[j].y + invaders[j].height) {
+                        
+                        invaders[j].alive = false;
+                        bullets.splice(i, 1);
+                        score += 10;
+                        break;
+                    }
+                }
+            }
+            
+            // Check if player is hit by invaders (game over condition)
+            for (let invader of invaders) {
+                if (invader.alive && invader.y > gameCanvas.height - 50) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // Check if all invaders are destroyed
+            if (invaders.every(invader => !invader.alive)) {
+                levelComplete();
+            }
+        }
+
+        // Draw the current game
+        function drawGame() {
+            const ctx = gameCanvas.getContext('2d');
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            switch(currentGame) {
+                case 'space':
+                    drawSpaceInvaders(ctx);
+                    break;
+                case 'pong':
+                    drawPong(ctx);
+                    break;
+                case 'breakout':
+                    drawBreakout(ctx);
+                    break;
+                default:
+                    drawSpaceInvaders(ctx);
+            }
+            
+            // Draw UI elements
+            drawUI(ctx);
+        }
+
+        // Draw space invaders game
+        function drawSpaceInvaders(ctx) {
+            // Draw player
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(playerX, gameCanvas.height - 30, 40, 10);
+            
+            // Draw invaders
+            for (let invader of invaders) {
+                if (invader.alive) {
+                    ctx.fillStyle = '#f00';
+                    ctx.fillRect(invader.x, invader.y, invader.width, invader.height);
+                }
+            }
+            
+            // Draw bullets
+            ctx.fillStyle = '#ff0';
+            for (let bullet of bullets) {
+                ctx.fillRect(bullet.x, bullet.y, 3, 10);
+            }
+        }
+
+        // Draw Pong game
+        function drawPong(ctx) {
+            // Draw paddles
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(20, 150, 10, 80);
+            ctx.fillRect(gameCanvas.width - 30, 150, 10, 80);
+            
+            // Draw ball
+            ctx.beginPath();
+            ctx.arc(gameCanvas.width / 2, gameCanvas.height / 2, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw center line
+            ctx.setLineDash([5, 15]);
+            ctx.beginPath();
+            ctx.moveTo(gameCanvas.width / 2, 0);
+            ctx.lineTo(gameCanvas.width / 2, gameCanvas.height);
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Draw Breakout game
+        function drawBreakout(ctx) {
+            // Draw paddle
+            ctx.fillStyle = '#0ff';
+            ctx.fillRect(gameCanvas.width / 2 - 40, gameCanvas.height - 20, 80, 10);
+            
+            // Draw ball
+            ctx.beginPath();
+            ctx.arc(gameCanvas.width / 2, gameCanvas.height - 30, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            
+            // Draw bricks
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 5; j++) {
+                    ctx.fillStyle = `hsl(${j * 36}, 100%, 50%)`;
+                    ctx.fillRect(i * 70 + 30, j * 25 + 30, 60, 20);
+                }
+            }
+        }
+
+        // Draw UI elements (score, lives, etc.)
+        function drawUI(ctx) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '16px "Press Start 2P"';
+            ctx.fillText(`SCORE: ${score}`, 20, 30);
+            ctx.fillText(`LIVES: ${lives}`, gameCanvas.width - 200, 30);
+        }
+
+        // Draw pause screen
+        function drawPauseScreen() {
+            const ctx = gameCanvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            ctx.fillStyle = '#ff0';
+            ctx.font = '24px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME PAUSED', gameCanvas.width / 2, gameCanvas.height / 2);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '16px "Press Start 2P"';
+            ctx.fillText('Press RESUME to continue', gameCanvas.width / 2, gameCanvas.height / 2 + 40);
+        }
+
+        // Game over screen
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+            
+            const ctx = gameCanvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            ctx.fillStyle = '#f00';
+            ctx.font = '32px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER', gameCanvas.width / 2, gameCanvas.height / 2 - 30);
+            
+            ctx.fillStyle = '#ff0';
+            ctx.font = '20px "Press Start 2P"';
+            ctx.fillText(`FINAL SCORE: ${score}`, gameCanvas.width / 2, gameCanvas.height / 2 + 20);
+            
+            ctx.fillStyle = '#0ff';
+            ctx.font = '16px "Press Start 2P"';
+            ctx.fillText('Click RESET to play again', gameCanvas.width / 2, gameCanvas.height / 2 + 60);
+        }
+
+        // Level complete screen
+        function levelComplete() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+            
+            const ctx = gameCanvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            ctx.fillStyle = '#0f0';
+            ctx.font = '32px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.fillText('LEVEL COMPLETE!', gameCanvas.width / 2, gameCanvas.height / 2 - 30);
+            
+            ctx.fillStyle = '#ff0';
+            ctx.font = '20px "Press Start 2P"';
+            ctx.fillText(`SCORE: ${score}`, gameCanvas.width / 2, gameCanvas.height / 2 + 20);
+            
+            ctx.fillStyle = '#0ff';
+            ctx.font = '16px "Press Start 2P"';
+            ctx.fillText('Click RESET to play again', gameCanvas.width / 2, gameCanvas.height / 2 + 60);
+        }
+
+        // Reset game
+        function resetGame() {
+            gameRunning = false;
+            gamePaused = false;
+            clearInterval(gameLoop);
+            
+            placeholderScreen.style.display = 'block';
+            gameCanvas.style.display = 'none';
+            playBtn.disabled = false;
+            pauseBtn.disabled = true;
+            resetBtn.disabled = true;
+            pauseBtn.innerHTML = '<i class="fas fa-pause"></i> PAUSE';
+            
+            // Reset game state
+            score = 0;
+            lives = 3;
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || gamePaused) return;
+            
+            switch(currentGame) {
+                case 'space':
+                    if (e.key === 'ArrowLeft' && playerX > 10) {
+                        playerX -= 10;
+                    } else if (e.key === 'ArrowRight' && playerX < gameCanvas.width - 50) {
+                        playerX += 10;
+                    } else if (e.key === ' ') {
+                        // Space bar to shoot
+                        bullets.push({
+                            x: playerX + 20,
+                            y: gameCanvas.height - 40
+                        });
+                    }
+                    break;
+                case 'pong':
+                    // Pong controls would go here
+                    break;
+                case 'breakout':
+                    // Breakout controls would go here
+                    break;
+            }
+        });
+
+        // Initialize space invaders when page loads
+        initSpaceInvaders();
     </script>
 </body>
 </html>
