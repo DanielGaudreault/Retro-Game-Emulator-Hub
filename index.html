@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimal NES Emulator</title>
+    <title>NES Emulator</title>
     <script>
-        // Embedded JSNES library (base64-encoded, minified)
+        // Embedded JSNES library (base64-encoded)
         (function() {
-            // Truncated base64 string for brevity (full string is ~300 KB)
-            const base64JSNES = "H4sIAAAAAAAAA+2dW2/buLJ/9z8Q/6/8/6/8/6/8..."; // Replace with full base64 string (see below)
+            const base64JSNES = "YOUR_BASE64_STRING_HERE"; // Replace with base64-encoded jsnes.min.js
             try {
                 const script = document.createElement('script');
                 script.textContent = atob(base64JSNES);
@@ -16,7 +15,7 @@
                 console.log('JSNES embedded script loaded');
             } catch (e) {
                 console.error('Failed to decode embedded JSNES:', e);
-                alert('Failed to load embedded JSNES library: ' + e.message);
+                alert('Failed to load JSNES library: ' + e.message);
             }
         })();
     </script>
@@ -73,7 +72,7 @@
             if (typeof JSNES === 'undefined') {
                 console.error('JSNES not loaded. Embedded script failed.');
                 status.textContent = 'Error: JSNES not loaded';
-                alert('Failed to load JSNES library. Please check the embedded base64 string or try a different browser.');
+                alert('Failed to load JSNES library. Check the base64 string or try another browser.');
                 return;
             }
 
@@ -142,7 +141,7 @@
                 reader.readAsArrayBuffer(file);
             };
 
-            // Basic controls
+            // Basic controls (mimicking ZSNES/FCEUX)
             const controls = {
                 'ArrowUp': JSNES.Controller.BUTTON_UP,
                 'ArrowDown': JSNES.Controller.BUTTON_DOWN,
